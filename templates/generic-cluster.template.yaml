@@ -1,0 +1,41 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: ${CLUSTER_ID}
+servers: ${NO_OF_SERVERS}
+image: rancher/k3s:${K3S_VER}
+network: k3d-cluster-network
+volumes:
+- volume: ${K3D_DIR}/calico-${CALICO_VER}.yaml:/var/lib/rancher/k3s/server/manifests/calico.yaml
+- volume: ${K3D_DIR}/metallb-native-${MLB_VER}.yaml:/var/lib/rancher/k3s/server/manifests/metallb-native.yaml
+options:
+  k3d: # k3d runtime settings
+    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
+    timeout: "60s" # wait timeout before aborting; same as `--timeout 60s`
+    disableLoadbalancer: false # same as `--no-lb`
+  k3s: # options passed on to K3s itself
+    extraArgs:
+    - arg: --disable=servicelb
+      nodeFilters:
+      - server:*
+    - arg: --disable-network-policy
+      nodeFilters:
+      - server:*
+    - arg: --flannel-backend=none
+      nodeFilters:
+      - server:*
+    - arg: --disable=traefik
+      nodeFilters:
+      - server:*
+    nodeLabels:
+    - label: topology.kubernetes.io/region=${REGION}
+      nodeFilters:
+      - server:*
+    - label: topology.kubernetes.io/zone=${ZONE}
+      nodeFilters:
+      - server:*
+  runtime:
+    HostPidMode: true
+  kubeconfig:
+    updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
+    switchCurrentContext: false # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)

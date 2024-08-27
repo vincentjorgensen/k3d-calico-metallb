@@ -23,3 +23,8 @@ Bring up a three-cluster setup with:
 k3d-up
 ```
 
+Destroy the clusters with: 
+
+```sh
+k3d-down
+```

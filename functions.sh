@@ -77,3 +77,16 @@ function k3d-down {
   delete-k3d-cluster $CLUSTER1
   delete-k3d-cluster $CLUSTER2
 }
+
+function k3d-solo-up {
+  create-k3d-cluster $SOLO <(
+   CLUSTER_ID="$SOLO"                             \
+   ZONE="us-west-2a"                              \
+   NO_OF_SERVERS=3                                \
+   envsubst                                       \
+   < "$K3D_DIR"/generic-cluster.template.yaml)
+}
+
+function k3d-solo-down {
+  delete-k3d-cluster $SOLO
+}

@@ -45,7 +45,10 @@ kubectl --context solo-cluster apply -f service_mockup.yaml
 When it's up, this curl command should return 200, proving that it hit the  
 httpbin service
 ```sh
-curl -I $(k get svc/httpbin -n httpbin -o=jsonpath='{.status.loadBalancer.ingress[0].ip}{":"}{.spec.ports[0].port}')
+curl -I $(kubectl get svc/httpbin               \
+          --context solo-cluster                \
+          --namespace httpbin                   \
+          -o=jsonpath='{.status.loadBalancer.ingress[0].ip}{":"}{.spec.ports[0].port}')
 ```
 
 Destroy the single cluster when you're finished

@@ -10,6 +10,7 @@ export CALICO_VER="3.28.1"
 export K3S_VER="v1.30.3-k3s1"
 export MLB_VER="v0.14.8"
 export REGION="us-west-2"
+export MLB_TEMP MLB_IP_ADDRESS_RANGE
 
 function create-k3d-cluster  {
 
@@ -52,23 +53,34 @@ function delete-k3d-cluster {
 }
 
 function k3d-up {
+  MLB_IP_ADDRESS_RANGE=192.168.96.20-192.168.96.29
+  MLB_TEMP=$(mktemp)
+  envsubst < "$K3D_DIR"/metallb-native-${MLB_VER}.template.yaml > "$MLB_TEMP"
   create-k3d-cluster $MGMT <(
-   CLUSTER_ID="$MGMT"                             \
-   ZONE="us-west-2a"                              \
-   NO_OF_SERVERS=1                                \
-   envsubst                                       \
+   CLUSTER_ID="$MGMT"                                                         \
+   ZONE="us-west-2a"                                                          \
+   NO_OF_SERVERS=1                                                            \
+   envsubst                                                                   \
    < "$K3D_DIR"/generic-cluster.template.yaml)
+
+  MLB_IP_ADDRESS_RANGE=192.168.96.30-192.168.96.39
+  MLB_TEMP=$(mktemp)
+  envsubst < "$K3D_DIR"/metallb-native-${MLB_VER}.template.yaml > "$MLB_TEMP"
   create-k3d-cluster $CLUSTER1 <(
-   CLUSTER_ID="$CLUSTER1"                         \
-   ZONE="us-west-2b"                              \
-   NO_OF_SERVERS=2                                \
-   envsubst                                       \
+   CLUSTER_ID="$CLUSTER1"                                                     \
+   ZONE="us-west-2b"                                                          \
+   NO_OF_SERVERS=2                                                            \
+   envsubst                                                                   \
    < "$K3D_DIR"/generic-cluster.template.yaml)
+
+  MLB_IP_ADDRESS_RANGE=192.168.96.40-192.168.96.49
+  MLB_TEMP=$(mktemp)
+  envsubst < "$K3D_DIR"/metallb-native-${MLB_VER}.template.yaml > "$MLB_TEMP"
   create-k3d-cluster $CLUSTER2 <(
-   CLUSTER_ID="$CLUSTER2"                         \
-   ZONE="us-west-2c"                              \
-   NO_OF_SERVERS=2                                \
-   envsubst                                       \
+   CLUSTER_ID="$CLUSTER2"                                                     \
+   ZONE="us-west-2c"                                                          \
+   NO_OF_SERVERS=2                                                            \
+   envsubst                                                                   \
    < "$K3D_DIR"/generic-cluster.template.yaml)
 }
 
@@ -79,14 +91,16 @@ function k3d-down {
 }
 
 function k3d-solo-up {
-  create-k3d-cluster $SOLO <(
-   CLUSTER_ID="$SOLO"                             \
-   ZONE="us-west-2a"                              \
-   NO_OF_SERVERS=3                                \
-   envsubst                                       \
+  MLB_IP_ADDRESS_RANGE=192.168.96.50-192.168.96.59
+  MLB_TEMP=$(mktemp)
+  create-k3d-cluster "$SOLO" <(
+   CLUSTER_ID="$SOLO"                                                         \
+   ZONE="us-west-2a"                                                          \
+   NO_OF_SERVERS=3                                                            \
+   envsubst                                                                   \
    < "$K3D_DIR"/generic-cluster.template.yaml)
 }
 
 function k3d-solo-down {
-  delete-k3d-cluster $SOLO
+  delete-k3d-cluster "$SOLO"
 }

@@ -93,6 +93,7 @@ function k3d-down {
 function k3d-solo-up {
   MLB_IP_ADDRESS_RANGE=192.168.96.50-192.168.96.59
   MLB_TEMP=$(mktemp)
+  envsubst < "$K3D_DIR"/metallb-native-${MLB_VER}.template.yaml > "$MLB_TEMP"
   create-k3d-cluster "$SOLO" <(
    CLUSTER_ID="$SOLO"                                                         \
    ZONE="us-west-2a"                                                          \

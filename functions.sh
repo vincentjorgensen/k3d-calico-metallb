@@ -7,7 +7,7 @@ export CLUSTER1=cluster1
 export CLUSTER2=cluster2
 
 export CALICO_VER="3.28.1"
-export K3S_VER="v1.30.3-k3s1"
+export K3S_VER="v1.31.0-k3s1"
 export MLB_VER="v0.14.8"
 export REGION="us-west-2"
 export MLB_TEMP MLB_IP_ADDRESS_RANGE

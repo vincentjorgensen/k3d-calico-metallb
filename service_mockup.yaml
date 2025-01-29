@@ -23,8 +23,8 @@ metadata:
 spec:
   ports:
   - name: http
-    port: 8080
-    targetPort: 80
+    port: 80
+    targetPort: 8080
   type: LoadBalancer
   selector:
     app: httpbin
@@ -35,7 +35,7 @@ metadata:
   name: httpbin
   namespace: httpbin
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: httpbin
@@ -46,8 +46,14 @@ spec:
     spec:
       serviceAccountName: httpbin
       containers:
-      - image: docker.io/kennethreitz/httpbin
+      - image: docker.io/mccutchen/go-httpbin:latest
         imagePullPolicy: IfNotPresent
         name: httpbin
+        command: [ go-httpbin ]
+        args:
+        - "-port"
+        - "8080"
+        - "-max-duration"
+        - "600s" # override default 10s
         ports:
-        - containerPort: 80
+        - containerPort: 8080

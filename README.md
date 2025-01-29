@@ -1,5 +1,7 @@
 # k3d-calico-metallb
 
+K3d cluster with local load-balancing and pre-installed with Istio Ambient.
+
 ## MacOS
 
 Make sure Docker Desktop is running (I also tested it successfully on Rancher Desktop).
@@ -22,12 +24,16 @@ source functions.sh
 
 Bring up a three-cluster setup with:
 ```sh
-k3d-up
+k3d-mgmt-up
+k3d-cluster1-up
+k3d-cluster2-up
 ```
 
 Destroy the clusters with: 
 ```sh
-k3d-down
+k3d-mgmt-down
+k3d-cluster1-down
+k3d-cluster2-down
 ```
 
 ## Simple Test

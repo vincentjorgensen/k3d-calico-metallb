@@ -1,54 +1,160 @@
 #!/usr/bin/env bash
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-K3D_DIR=$SCRIPT_DIR/templates
-
+# k3d (k8s) cluster names
+export MGMT CLUSTER1 CLUSTER2 CLUSTER3 CLUSTER4 SOLO SOLO1 SOLO2 DEMO DEMO1
+DEMO=demo
+DEMO1=demo1
 MGMT=mgmt
 CLUSTER1=cluster1
 CLUSTER2=cluster2
+CLUSTER3=cluster3
+CLUSTER4=cluster4
 SOLO=solo
+SOLO1=solo1
+SOLO2=solo2
 
-CALICO_VER="3.29.1"
-K3S_VER="v1.31.4-k3s1"
-MLB_VER="v0.14.9"
-REGION="us-west-2"
+# Docker Desktop networks
+export DOCKER_NETWORK DOCKER_SUBNET 
+export IP_RANGE_20 IP_RANGE_30 IP_RANGE_40 IP_RANGE_50 IP_RANGE_100
+export IP_RANGE_60 IP_RANGE_70 IP_RANGE_80 IP_RANGE_90 IP_RANGE_110
+DOCKER_NETWORK=k3d-cluster-network
+DOCKER_SUBNET=192.168.96.0/24
+IP_RANGE_20=192.168.96.20-192.168.96.29
+IP_RANGE_30=192.168.96.30-192.168.96.39
+IP_RANGE_40=192.168.96.40-192.168.96.49
+IP_RANGE_50=192.168.96.50-192.168.96.59
+IP_RANGE_60=192.168.96.60-192.168.96.69
+IP_RANGE_70=192.168.96.70-192.168.96.79
+IP_RANGE_80=192.168.96.80-192.168.96.89
+IP_RANGE_90=192.168.96.90-192.168.96.99
+IP_RANGE_100=192.168.96.100-192.168.96.109
+IP_RANGE_110=192.168.96.110-192.168.96.119
 
-K8S_GATEWAY_API_VER=v1.2.1
+# K3D names and places
+export K3D_DIR MLB_TEMP MLB_IP_ADDRESS_RANGE AMBIENT_TEMP MLB_ADDY_POOL
+export CLUSTER_ID K3D_ZONE K3D_REGION KGATEWAY_TEMP
+K3D_DIR=$SCRIPT_DIR/templates
+MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
+
+# k8s cluster versions
+export CALICO_VER K3S_VER MLB_VER K3D_REGION K3D_ZONE K3D_TEMPLATE K3D_SERVERS
+CALICO_VER="3.29.1"                        # https://github.com/projectcalico/calico/tags, https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/calico.yaml
+K3S_VER="v1.31.5-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
+MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags, https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
+                                           # metallb-native.address-pool.template.yaml
+
+# HELM and ISTIO
+export KGATEWAY_VER ISTIO_VER ISTIO_REPO HELM_CHART HELM_CHART_VER
+KGATEWAY_VER=v1.2.1
 ISTIO_VER=1.24.2-solo
 ISTIO_REPO=us-docker.pkg.dev/gloo-mesh/istio-4d37697f9711
 HELM_CHART=istio
 HELM_CHART_VER=1.24.2
 
-export K3D_DIR MGMT CLUSTER1 CLUSTER2 SOLO
-export CALICO_VER K3S_VER MLB_VER REGION
-export K8S_GATEWAY_API_VER ISTIO_VER ISTIO_REPO HELM_CHART HELM_CHART_VER
-export MLB_IP_ADDRESS_RANGE AMBIENT_TEMP MLB_TEMP
+# k3d-registry-dockerd, a docker proxy that elimiates anonymous docker login errors in k8s
+# Docker Desktop must be running
+# https://github.com/ligfx/k3d-registry-dockerd
+function dockerproxy {
+  local mode
+  mode=$1
 
+  if [[ $mode == start ]]; then
+    k3d registry create -i ligfx/k3d-registry-dockerd:v0.7                    \
+      -v /var/run/docker.sock:/var/run/docker.sock                            \
+      dockerproxy
+  fi
 
-# Metal LB template with localhost IP range
-function mlb_template {
+  if [[ $mode == stop ]]; then
+    k3d registry delete k3d-dockerproxy
+  fi
+
+  if [[ $mode == status ]]; then
+    docker ps -f name=k3d-dockerproxy |
+      grep -E '\<k3d-dockerproxy\>' > /dev/null 2>&1
+  fi
+  return $?
+}
+
+function docker-k3d-network {
+  local mode network subnet
+  mode=$1
+  network=$2
+  subnet=$3
+
+  if [[ $mode == start ]]; then
+    docker network create --subnet "$subnet" "$network" > /dev/null 2>&1
+  fi
+
+  if [[ $mode == stop ]]; then
+    docker network rm "$network" > /dev/null 2>&1
+  fi
+  if [[ $mode == running ]]; then
+    docker network ls -f name="$network" |
+      grep -E '\<'"$network"'\>' > /dev/null 2>&1
+  fi
+  return $?
+}
+
+# Create k3d cluster "k3d-create-cluster <name> <config_file>
+function k3d-cluster-create  {
+  local config name
+  name=$1
+  config=$2
+
+  # create docker network if it does not exist
+  if ! docker-k3d-network status; then
+    docker-k3d-network start "$DOCKER_NETWORK" "$DOCKER_SUBNET"
+  fi
+
+  if ! dockerproxy status; then
+    dockerproxy start
+  fi
+
+  k3d cluster create --wait --config "${config}"
+
+  # remove existing ones if they exist
+  kubectl config delete-cluster "${name}" > /dev/null 2>&1 || true
+  kubectl config delete-user    "${name}" > /dev/null 2>&1 || true
+  kubectl config delete-context "${name}" > /dev/null 2>&1 || true
+
+  kubectl config rename-context "k3d-${name}" "${name}"
+}
+
+# delete k3d cluster "k3d-cluster-delete <name>"
+function k3d-cluster-delete {
+  local name
+  name=$1
+
+  k3d cluster delete "$name"
+
+  # because we renamed them we need to delete the names
+  kubectl config delete-cluster "$name" > /dev/null 2>&1 || true
+  kubectl config delete-user "$name" > /dev/null 2>&1 || true
+  kubectl config delete-context "$name" > /dev/null 2>&1 || true
+}
+
+function mlb-template-create {
   local temp
   local ip_range=$1
   temp=$(mktemp)
 
   MLB_IP_ADDRESS_RANGE=$ip_range
-  envsubst < "$K3D_DIR"/metallb-native.address-pool.template.yaml > "$temp"
+  envsubst < "$MLB_ADDY_POOL" > "$temp"
 
-  echo "$temp"
+  echo -n "$temp"
 }
 
-# Istio Ambient Template from Helm Charts
-function ambient_template {
-  local temp
-  local cluster=$1
-  local variant=distroless
+function ambient-template-create {
+  local temp cluster variant
+  cluster=$1
+  variant=distroless
   temp=$(mktemp)
 
-  { helm template istio-base ${HELM_CHART}/base                               \
-    --version ${HELM_CHART_VER}                                               \
+  { helm template istio-base "$HELM_CHART"/base                               \
+    --version "$HELM_CHART_VER"                                               \
     --namespace istio-system
 
-  helm template istiod ${HELM_CHART}/istiod                                   \
-    --version ${HELM_CHART_VER}                                               \
+  helm template istiod "$HELM_CHART"/istiod                                   \
+    --version "$HELM_CHART_VER"                                               \
     --namespace istio-system                                                  \
     --set profile=ambient                                                     \
     --set "hub=${ISTIO_REPO}"                                                 \
@@ -65,8 +171,8 @@ function ambient_template {
     --set "meshConfig.trustDomain=${cluster}.local"                           \
     --set "platforms.peering.enabled=true"
 
-  helm template istio-cni ${HELM_CHART}/cni                                   \
-    --version ${HELM_CHART_VER}                                               \
+  helm template istio-cni "$HELM_CHART"/cni                                   \
+    --version "$HELM_CHART_VER"                                               \
     --namespace istio-system                                                  \
     --set profile=ambient                                                     \
     --set "hub=${ISTIO_REPO}"                                                 \
@@ -74,8 +180,8 @@ function ambient_template {
     --set "variant=${variant}"                                                \
     --set "ambient.dnsCapture=true"
 
-  helm template ztunnel ${HELM_CHART}/ztunnel                                 \
-    --version ${HELM_CHART_VER}                                               \
+  helm template ztunnel "$HELM_CHART"/ztunnel                                 \
+    --version "$HELM_CHART_VER"                                               \
     --namespace istio-system                                                  \
     --set "hub=${ISTIO_REPO}"                                                 \
     --set "tag=${ISTIO_VER}"                                                  \
@@ -88,112 +194,77 @@ function ambient_template {
     --set "env.SKIP_VALIDATE_TRUST_DOMAIN=true"
   } >> "$temp" 2> /dev/null
 
-  echo "$temp"
+  echo -n "$temp"
 }
 
-# Create a k3d cluster
-function create-k3d-cluster  {
+function kgateway-create {
+  local temp
+  temp=$(mktemp)
 
-  name=$1
-  config=$2
+  cat "$K3D_DIR"/kgateway.crds.standard-install."$KGATEWAY_VER".yaml > "$temp"
 
-  # docker network
-  network=k3d-cluster-network
-  if [[ -n $DOCKER_NETWORK ]]; then
-    network=$DOCKER_NETWORK
+  echo -n "$temp"
+}
+
+function k3d-cluster {
+  local mode name ip_range zone region no_of_servers enable_ambient
+
+  mode=$1
+  name=$2
+  ip_range=$3
+  zone=$4
+  region=$5
+  no_of_servers=$6
+  enable_ambient=$7
+
+  if [[ $mode == create ]]; then
+    if $enable_ambient; then
+      AMBIENT_TEMP=$(ambient-template-create "$name")
+      KGATEWAY_TEMP=$(kgateway-create)
+    else
+      AMBIENT_TEMP=$(mktemp)
+      KGATEWAY_TEMP=$(mktemp)
+    fi
+
+    MLB_TEMP=$(mlb-template-create "$ip_range")
+
+    k3d-cluster-create "$name" <(
+      CLUSTER_ID="$name"                                                      \
+      K3D_ZONE="$zone"                                                        \
+      K3D_REGION="$region"                                                    \
+      K3D_SERVERS="$no_of_servers"                                            \
+      envsubst                                                                \
+      < "$K3D_DIR"/k3d-omni-cluster.template.yaml)
   fi
 
-  # create docker network if it does not exist
-  docker network create "$network" > /dev/null 2>&1 || true
-
-  # k3d registry create k3d-registry
-
-  k3d cluster create --wait --config "${config}"
-
-  # remove existing ones if they exist
-  kubectl config delete-cluster "${name}" > /dev/null 2>&1 || true
-  kubectl config delete-user    "${name}" > /dev/null 2>&1 || true
-  kubectl config delete-context "${name}" > /dev/null 2>&1 || true
-
-  kubectl config rename-context "k3d-${name}" "${name}"
+  if [[ $mode == delete ]]; then
+    delete-k3d-cluster "$name"
+  fi
+  return $?
 }
 
-# Delete a k3d cluster
-function delete-k3d-cluster {
-  name=$1
+alias d0up="k3d-cluster create \$DEMO \$IP_RANGE_100 us-west-1 us-west-1a 3 false"
+alias d0down="k3d-cluster delete \$DEMO"
+alias d1up="k3d-cluster create \$DEMO1 \$IP_RANGE_110 us-west-1 us-west-1b 1 false"
+alias d1down="k3d-cluster delete \$DEMO1"
 
-  # DO NOT DELETE NETWORK
-  #network=k3d-cluster-network
-  #k3d cluster delete "$name"
+alias m0up="k3d-cluster create \$MGMT \$IP_RANGE_20 us-west-2 us-west-2a 2 false"
+alias m0down="k3d-cluster delete \$MGMT"
 
-  # because we renamed them we need to delete the names
-  kubectl config delete-cluster "$name" > /dev/null 2>&1 || true
-  kubectl config delete-user "$name" > /dev/null 2>&1 || true
-  kubectl config delete-context "$name" > /dev/null 2>&1 || true
+alias c1up="k3d-cluster create \$CLUSTER1 \$IP_RANGE_30 us-west-2 us-west-2a 2 true"
+alias c1down="k3d-cluster delete \$CLUSTER1"
+alias c2up="k3d-cluster create \$CLUSTER2 \$IP_RANGE_40 us-west-2 us-west-2b 2 true"
+alias c2down="k3d-cluster delete \$CLUSTER2"
+alias c3up="k3d-cluster create \$CLUSTER3 \$IP_RANGE_50 us-west-2 us-west-2c 2 true"
+alias c3down="k3d-cluster delete \$CLUSTER3"
+alias c4up="k3d-cluster create \$CLUSTER4 \$IP_RANGE_60 us-west-2 us-west-2d 2 true"
+alias c4down="k3d-cluster delete \$CLUSTER4"
 
-  #docker network rm $network > /dev/null 2>&1 || true
-}
+alias s0up="k3d-cluster create \$SOLO \$IP_RANGE_70 us-east-2 us-east-1a 3 true"
+alias s0down="k3d-cluster delete \$SOLO"
+alias s1up="k3d-cluster create \$SOLO1 \$IP_RANGE_80 us-east-2 us-east-1b 1 true"
+alias s1down="k3d-cluster delete \$SOLO1"
+alias s2up="k3d-cluster create \$SOLO2 \$IP_RANGE_90 us-east-2 us-east-1c 2 true"
+alias s2down="k3d-cluster delete \$SOLO2"
 
-function k3d-mgmt-up {
-  MLB_TEMP=$(mlb_template 192.168.96.20-192.168.96.29)
-  AMBIENT_TEMP=$(ambient_template $MGMT)
-
-  create-k3d-cluster $MGMT <(
-   CLUSTER_ID="$MGMT"                                                         \
-   ZONE="us-west-2a"                                                          \
-   NO_OF_SERVERS=1                                                            \
-   envsubst                                                                   \
-   < "$K3D_DIR"/ambient-cluster.template.yaml)
-}
-
-function k3d-cluster1-up {
-  MLB_TEMP=$(mlb_template 192.168.96.30-192.168.96.39)
-  AMBIENT_TEMP=$(ambient_template $CLUSTER1)
-
-  create-k3d-cluster $CLUSTER1 <(
-   CLUSTER_ID="$CLUSTER1"                                                     \
-   ZONE="us-west-2b"                                                          \
-   NO_OF_SERVERS=2                                                            \
-   envsubst                                                                   \
-   < "$K3D_DIR"/ambient-cluster.template.yaml)
-}
-
-function k3d-cluster2-up {
-  MLB_TEMP=$(mlb_template 192.168.96.40-192.168.96.49)
-  AMBIENT_TEMP=$(ambient_template $CLUSTER2)
-
-  create-k3d-cluster $CLUSTER2 <(
-   CLUSTER_ID="$CLUSTER2"                                                     \
-   ZONE="us-west-2c"                                                          \
-   NO_OF_SERVERS=2                                                            \
-   envsubst                                                                   \
-   < "$K3D_DIR"/ambient-cluster.template.yaml)
-}
-
-function k3d-mgmt-down {
-  delete-k3d-cluster "$MGMT"
-}
-
-function k3d-cluster1-down {
-  delete-k3d-cluster "$CLUSTER1"
-}
-
-function k3d-cluster2-down {
-  delete-k3d-cluster "$CLUSTER2"
-}
-
-function k3d-solo-up {
-  MLB_TEMP=$(mlb_template 192.168.96.50-192.168.96.59)
-  AMBIENT_TEMP=$(ambient_template $SOLO)
-
-  create-k3d-cluster "$SOLO" <(
-   CLUSTER_ID="$SOLO"                                                         \
-   ZONE="us-west-2d"                                                          \
-   NO_OF_SERVERS=3                                                            \
-   envsubst                                                                   \
-   < "$K3D_DIR"/ambient-cluster.template.yaml)
-}
-
-function k3d-solo-down {
-  delete-k3d-cluster "$SOLO"
-}
+# END

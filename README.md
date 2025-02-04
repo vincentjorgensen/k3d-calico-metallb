@@ -19,45 +19,71 @@ sudo brew services start chipmk/tap/docker-mac-net-connect
 
 Source `functions.sh`
 ```sh
-source functions.sh
+source ./functions.sh
 ```
 
 Bring up a three-cluster setup with:
 ```sh
-k3d-mgmt-up
-k3d-cluster1-up
-k3d-cluster2-up
+m0up
+c1up
+c2up
 ```
+
+The three clusters' contexts are `mgmt`, `cluster1`, and `cluster2`.
 
 Destroy the clusters with: 
 ```sh
-k3d-mgmt-down
-k3d-cluster1-down
-k3d-cluster2-down
+m0down
+c1down
+c2down
 ```
 
 ## Simple Test
 
-Bring up a single cluster
-```sh
-k3d-solo-up
+Bring up a single cluster:
+```bash
+s0up
 ```
 
-Create a simple httpbin service of type LoadBalancer
-```sh
-kubectl --context solo-cluster apply -f service_mockup.yaml
+The cluster's context is `solo`.
+
+Create a simple httpbin service of type `LoadBalancer`
+```bash
+kubectl --context solo apply -f templates/service_mockup.yaml
 ```
 
 When it's up, this curl command should return 200, proving that it hit the  
 httpbin service
 ```sh
-curl -I $(kubectl get svc/httpbin               \
-          --context solo-cluster                \
-          --namespace httpbin                   \
+curl -I $(kubectl get svc/httpbin                                             \
+          --context solo                                                      \
+          --namespace httpbin                                                 \
           -o=jsonpath='{.status.loadBalancer.ingress[0].ip}{":"}{.spec.ports[0].port}')
 ```
 
 Destroy the single cluster when you're finished
 ```sh
-k3d-solo-down
+s0down
+```
+
+## Technical Notes
+
+It is important to start the docker network with the a subnet cidr that
+includes the metalllb subnets. I got bit by this. For example, the snippet
+below (similar to what is used in `functions.sh`) creates docker network
+resource.
+
+```bash
+# Create a docker network on a defined subnet
+docker network create --subnet 192.168.96.0/24 k3d-cluster-network
+```
+
+Then, the k3d cluster template, we specify this network: `network: k3d-cluster-network`.
+
+Finally, in the metallb address pool, we chose an ip range in this cidr.
+
+```yaml
+spec:
+  addresses:
+  - 192.168.96.20-192.168.96.29
 ```

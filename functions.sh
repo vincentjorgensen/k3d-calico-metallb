@@ -238,7 +238,7 @@ function k3d-cluster {
   fi
 
   if [[ $mode == delete ]]; then
-    delete-k3d-cluster "$name"
+    k3d-cluster-delete "$name"
   fi
   return $?
 }

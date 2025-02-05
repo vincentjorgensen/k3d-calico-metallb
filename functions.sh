@@ -12,7 +12,8 @@ SOLO=solo
 SOLO1=solo1
 SOLO2=solo2
 
-# Docker Desktop networks
+# Docker network and subnet plus IP ranges
+# The IP ranges must be in the subnet cidr
 export DOCKER_NETWORK DOCKER_SUBNET 
 export IP_RANGE_20 IP_RANGE_30 IP_RANGE_40 IP_RANGE_50 IP_RANGE_100
 export IP_RANGE_60 IP_RANGE_70 IP_RANGE_80 IP_RANGE_90 IP_RANGE_110
@@ -37,12 +38,14 @@ MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 
 # k8s cluster versions
 export CALICO_VER K3S_VER MLB_VER K3D_REGION K3D_ZONE K3D_TEMPLATE K3D_SERVERS
-CALICO_VER="3.29.1"                        # https://github.com/projectcalico/calico/tags, https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/calico.yaml
+CALICO_VER="3.29.1"                        # https://github.com/projectcalico/calico/tags
+                                           # https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/calico.yaml
 K3S_VER="v1.31.5-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
-MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags, https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
+MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags
+                                           # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
 
-# HELM and ISTIO
+# HELM and ISTIO versions
 export KGATEWAY_VER ISTIO_VER ISTIO_REPO HELM_CHART HELM_CHART_VER
 KGATEWAY_VER=v1.2.1
 ISTIO_VER=1.24.2-solo
@@ -51,7 +54,7 @@ HELM_CHART=istio
 HELM_CHART_VER=1.24.2
 
 # k3d-registry-dockerd, a docker proxy that elimiates anonymous docker login errors in k8s
-# Docker Desktop must be running
+# Docker Desktop must be running (TBD does this work with Rancher Desktop?)
 # https://github.com/ligfx/k3d-registry-dockerd
 function dockerproxy {
   local mode
@@ -143,6 +146,8 @@ function mlb-template-create {
   echo -n "$temp"
 }
 
+# Create an ambient template from helm. This will be mounted as a k3d volume in
+# the directory that k3d sources at initialization
 function ambient-template-create {
   local temp cluster variant
   cluster=$1
@@ -197,6 +202,7 @@ function ambient-template-create {
   echo -n "$temp"
 }
 
+# kgateway crds. Also mounted as a k3d initialization volume
 function kgateway-create {
   local temp
   temp=$(mktemp)
@@ -206,14 +212,15 @@ function kgateway-create {
   echo -n "$temp"
 }
 
+# k3d cluster [create|delete] [cluster_name] <ip_range> <region> <zone> <no_of_servers> <enable_ambient>
 function k3d-cluster {
   local mode name ip_range zone region no_of_servers enable_ambient
 
   mode=$1
   name=$2
   ip_range=$3
-  zone=$4
-  region=$5
+  region=$4
+  zone=$5
   no_of_servers=$6
   enable_ambient=$7
 
@@ -243,14 +250,17 @@ function k3d-cluster {
   return $?
 }
 
+# DEMO clusters. No istio
 alias d0up="k3d-cluster create \$DEMO \$IP_RANGE_100 us-west-1 us-west-1a 3 false"
 alias d0down="k3d-cluster delete \$DEMO"
 alias d1up="k3d-cluster create \$DEMO1 \$IP_RANGE_110 us-west-1 us-west-1b 1 false"
 alias d1down="k3d-cluster delete \$DEMO1"
 
+# MGMT cluster. No istio
 alias m0up="k3d-cluster create \$MGMT \$IP_RANGE_20 us-west-2 us-west-2a 2 false"
 alias m0down="k3d-cluster delete \$MGMT"
 
+# CLUSTER clusters. Ambient enabled
 alias c1up="k3d-cluster create \$CLUSTER1 \$IP_RANGE_30 us-west-2 us-west-2a 2 true"
 alias c1down="k3d-cluster delete \$CLUSTER1"
 alias c2up="k3d-cluster create \$CLUSTER2 \$IP_RANGE_40 us-west-2 us-west-2b 2 true"
@@ -260,6 +270,7 @@ alias c3down="k3d-cluster delete \$CLUSTER3"
 alias c4up="k3d-cluster create \$CLUSTER4 \$IP_RANGE_60 us-west-2 us-west-2d 2 true"
 alias c4down="k3d-cluster delete \$CLUSTER4"
 
+# SOLO clusters. Ambient enabled
 alias s0up="k3d-cluster create \$SOLO \$IP_RANGE_70 us-east-2 us-east-1a 3 true"
 alias s0down="k3d-cluster delete \$SOLO"
 alias s1up="k3d-cluster create \$SOLO1 \$IP_RANGE_80 us-east-2 us-east-1b 1 true"

@@ -62,6 +62,7 @@ function dockerproxy {
 
   if [[ $mode == start ]]; then
     k3d registry create -i ligfx/k3d-registry-dockerd:v0.7                    \
+      --default-network $DOCKER_NETWORK                                       \
       -v /var/run/docker.sock:/var/run/docker.sock                            \
       dockerproxy
   fi

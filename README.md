@@ -136,7 +136,7 @@ The last number is the total time that passed in the universe, so 34 seconds.
 ## Technical Notes
 
 It is important to start the docker network with the a subnet cidr that
-includes the metalllb subnets. I got bit by this. For example, the snippet
+includes the metallb subnets. I got bit by this. For example, the snippet
 below (similar to what is used in [functions.sh](./functions.sh#L87) creates
 docker network resource.
 

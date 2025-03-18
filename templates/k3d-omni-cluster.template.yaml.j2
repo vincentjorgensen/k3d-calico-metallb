@@ -1,0 +1,73 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: {{ cluster_id }}
+servers: {{ num_of_nodes }}
+image: rancher/k3s:{{ k3s_ver }}
+network: {{ docker_network }}
+volumes:
+- volume: {{ k3d_dir }}/calico-{{ calico_ver }}.yaml:/var/lib/rancher/k3s/server/manifests/00-calico.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ k3d_dir }}/metallb-native-{{ mlb_ver }}.yaml:/var/lib/rancher/k3s/server/manifests/20-metallb-native.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ mlb_temp }}:/var/lib/rancher/k3s/server/manifests/21-metallb-native.address-pool.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ istio_system_ns_temp }}:/var/lib/rancher/k3s/server/manifests/70-namespace.istio-system.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ ca_cert_temp }}:/var/lib/rancher/k3s/server/manifests/71-secret.cacerts.{{ cluster_id }}.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ ambient_temp }}:/var/lib/rancher/k3s/server/manifests/80-ambient.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ kgateway_temp }}:/var/lib/rancher/k3s/server/manifests/90-kgateway.crds.yaml
+  nodeFilters:
+  - server:*
+- volume: {{ ew_gateway_temp }}:/var/lib/rancher/k3s/server/manifests/91-ew-gateway.yaml
+  nodeFilters:
+  - server:*
+options:
+  k3d: # k3d runtime settings
+    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
+    timeout: "60s" # wait timeout before aborting; same as `--timeout 60s`
+    disableLoadbalancer: false # same as `--no-lb`
+  k3s: # options passed on to K3s itself
+    extraArgs:
+    - arg: --disable=servicelb
+      nodeFilters:
+      - server:*
+    - arg: --disable-network-policy
+      nodeFilters:
+      - server:*
+    - arg: --flannel-backend=none
+      nodeFilters:
+      - server:*
+    - arg: --disable=traefik
+      nodeFilters:
+      - server:*
+    nodeLabels:
+    - label: topology.kubernetes.io/region={{ k3d_region }}
+      nodeFilters:
+      - server:*
+    {% for node_num in range(0, num_of_nodes|int) %}
+    - label: topology.kubernetes.io/zone={{ k3d_region }}{{ zones[node_num] }}
+      nodeFilters:
+      - server:{{ node_num }}
+    {% endfor %}
+  runtime:
+    HostPidMode: true
+  kubeconfig:
+    updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
+    switchCurrentContext: false # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)
+registries:
+  use:
+    - k3d-dockerproxy:5000
+  config: |
+    mirrors:
+      "*":
+        endpoint:
+          - "http://k3d-dockerproxy:5000"

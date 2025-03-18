@@ -23,6 +23,11 @@ Install or update k3d:
 curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 ```
 
+Install `jinja2` for templating:
+```bash
+brew install jinja2
+```
+
 Install [Docker Mac Net Connect](https://github.com/chipmk/docker-mac-net-connect)
 ```sh
 brew install chipmk/tap/docker-mac-net-connect
@@ -159,3 +164,11 @@ spec:
   - 192.168.96.20-192.168.96.29
 ```
 
+For Docker Desktop greater than `v4.39.0` the network needs an extra option:
+```bash
+docker network create "$network"                                              \
+      --subnet "$subnet"                                                      \
+      --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"
+```
+
+[See this](https://github.com/chipmk/docker-mac-net-connect/issues/48) for details.

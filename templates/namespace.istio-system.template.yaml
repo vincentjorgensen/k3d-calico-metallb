@@ -4,5 +4,6 @@ kind: Namespace
 metadata:
   labels:
     name: istio-system
+    topology.istio.io/network: "${CLUSTER_ID}"
   name: istio-system
 ...

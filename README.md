@@ -102,16 +102,16 @@ k3d cluster [create|delete] [cluster_name] <ip_range> <region> <zone> <no_of_ser
 In the samples above, I'll explain two of the convience aliases that I use:
 
 ```bash
-alias d0up="k3d-cluster create \$DEMO \$IP_RANGE_100 us-west-1 us-west-1a 3 false"
-alias d0down="k3d-cluster delete \$DEMO"
+alias d0up3="k3d-cluster -m create -c \$DEMO -r \$IP_RANGE_100 -e us-west-1 -s 3"
+alias d0down="k3d-cluster -m delete -c \$DEMO"
 
-alias c1up="k3d-cluster create \$CLUSTER1 \$IP_RANGE_30 us-west-2 us-west-2a 2 true"
+alias c1upa="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2 -i"
 alias c1down="k3d-cluster delete \$CLUSTER1"
 ```
 
-For the `demo` cluster, we create a cluster in the 192.168.96.100-109 range with 3 servers and no ambient (the regions and zones are arbitrary).
+For the `demo` cluster, we create a cluster in the 192.168.96.100-109 range with 3 servers and no ambient (the region is arbitrary).
 
-For the `cluster1` cluster, we create a cluster in the 192.168.96.30-39 range with 2 servers and enable ambient.
+For the `cluster1` cluster, we create a cluster in the 192.168.96.30-39 range with 1 server and enable ambient.
 
 For your purposes, you can change these values to what fit your needs, or add your own!
 

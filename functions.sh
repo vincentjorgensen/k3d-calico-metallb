@@ -462,19 +462,20 @@ alias c1up_np="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2
 alias c1down="k3d-cluster -m delete -c \$CLUSTER1"
 alias c2upa="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2 -i"
 alias c2up="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2"
+alias c2up3="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2 -s 3"
 alias c2up_np="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2 -y"
 alias c2down="k3d-cluster -m delete -c \$CLUSTER2"
-alias c3upa="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-2 -i"
-alias c3up="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-2"
-alias c3up_np="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-2 -y"
+alias c3upa="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-1 -i"
+alias c3up="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-1"
+alias c3up_np="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-1 -y"
 alias c3down="k3d-cluster -m delete -c \$CLUSTER3"
-alias c4upa="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-2 -i"
-alias c4up="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-2"
-alias c4up_np="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-2 -y"
+alias c4upa="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-1 -i"
+alias c4up="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-1"
+alias c4up_np="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-1 -y"
 alias c4down="k3d-cluster -m delete -c \$CLUSTER4"
 
 # ArgoCD
 alias a0up="k3d-cluster -m create -c \$ARGOCD -r \$IP_RANGE_100 -e us-west-2 -a"
-alias a0down="k3d-cluster -m delete -n \$ARGOCD"
+alias a0down="k3d-cluster -m delete -c \$ARGOCD"
 
 # End

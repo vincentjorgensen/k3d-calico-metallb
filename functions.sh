@@ -90,6 +90,21 @@ function dockerproxy {
   return $?
 }
 
+function docker-pihole-dns-server {
+  local _mode
+  _mode=$1
+
+  if [[ $_mode == start ]]; then
+    docker compose -f <(jinja2 -D network="$DOCKER_NETWORK" "$K3D_DIR"/pihole.docker-compose.yaml.j2) --project-directory "$K3D_DIR" up -d
+  elif [[ $_mode == stop ]]; then
+    echo 
+    docker compose -f <(jinja2 -D network="$DOCKER_NETWORK" "$K3D_DIR"/pihole.docker-compose.yaml.j2) --project-directory "$K3D_DIR" down pihole
+  elif [[ $_mode == status ]]; then
+    docker compose -f <(jinja2 -D network="$DOCKER_NETWORK" "$K3D_DIR"/pihole.docker-compose.yaml.j2) --project-directory "$K3D_DIR" ps | grep pihole | grep -q healthy
+  fi
+  return $?
+}
+
 function docker-k3d-network {
   local mode network subnet
   mode=$1
@@ -128,11 +143,15 @@ function k3d-cluster-create  {
     dockerproxy start
   fi
 
+  if ! docker-pihole-dns-server status; then
+    docker-pihole-dns-server start
+  fi
+
   k3d cluster create --wait --config "${config}"
 
   # remove existing ones if they exist
   kubectl config delete-cluster "${name}" > /dev/null 2>&1 || true
-  kubectl config delete-user    "${name}" > /dev/null 2>&1 || true
+  kubectl config delete-user    "admin@${name}" > /dev/null 2>&1 || true
   kubectl config delete-context "${name}" > /dev/null 2>&1 || true
 
   kubectl config rename-context "k3d-${name}" "${name}"
@@ -146,8 +165,8 @@ function k3d-cluster-delete {
   k3d cluster delete "$name"
 
   # because we renamed them we need to delete the names
-  kubectl config delete-cluster "$name" > /dev/null 2>&1 || true
-  kubectl config delete-user "$name" > /dev/null 2>&1 || true
+  kubectl config delete-cluster "k3d-$name" > /dev/null 2>&1 || true
+  kubectl config delete-user "admin@k3d-${name}" > /dev/null 2>&1 || true
   kubectl config delete-context "$name" > /dev/null 2>&1 || true
 }
 

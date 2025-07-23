@@ -75,7 +75,7 @@ function dockerproxy {
   mode=$1
 
   if [[ $mode == start ]]; then
-    k3d registry create -i ligfx/k3d-registry-dockerd:v0.9                    \
+    k3d registry create -i ligfx/k3d-registry-dockerd:v0.10                   \
       --default-network $DOCKER_NETWORK                                       \
       -v /var/run/docker.sock:/var/run/docker.sock                            \
       dockerproxy
@@ -496,5 +496,11 @@ alias c4down="k3d-cluster -m delete -c \$CLUSTER4"
 # ArgoCD
 alias a0up="k3d-cluster -m create -c \$ARGOCD -r \$IP_RANGE_100 -e us-west-2 -a"
 alias a0down="k3d-cluster -m delete -c \$ARGOCD"
+
+# Cluster resets
+function c1j { c1down;c1up; }
+function c2j { c2down;c2up; }
+function c3j { c3down;c3up; }
+function c4j { c4down;c4up; }
 
 # End

@@ -339,13 +339,14 @@ function ew-gateway-create {
 }
 
 function create-feature-map {
-  local _calico _mlb _istio _ew _ip_range _argocd _cluster_name
+  local _calico _mlb _istio _ew _ip_range _argocd _cluster_name _pihole
   local _temp _argocd_temp
 
   _temp=$(mktemp)
 
   _cluster_name=no_name
 
+  _pihole=true
   _calico=true
   _mlb=true
   _istio=false
@@ -373,6 +374,12 @@ EOF
   if $_calico; then
     cat <<EOF >> "$_temp"
   ${K3D_DIR}/calico-${CALICO_VER}.yaml: 00-calico.yaml
+EOF
+  fi
+  # Pihole
+  if $_pihole; then
+    cat <<EOF >> "$_temp"
+  ${K3D_DIR}/configmap.coredns.pihole.yaml: 01-pihole.yaml
 EOF
   fi
   # Metal LB
@@ -502,5 +509,6 @@ function c1j { c1down;c1up; }
 function c2j { c2down;c2up; }
 function c3j { c3down;c3up; }
 function c4j { c4down;c4up; }
+function m0j { m0down;m0up; }
 
 # End

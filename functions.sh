@@ -50,9 +50,9 @@ MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 
 # k8s cluster versions
 export CALICO_VER K3S_VER MLB_VER K3D_TEMPLATE
-CALICO_VER="3.30.0"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
+CALICO_VER="3.30.3"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.0/manifests/calico.yaml
-K3S_VER="v1.31.8-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
+K3S_VER="v1.31.12-k3s1"                    # https://hub.docker.com/r/rancher/k3s/tags
 MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml

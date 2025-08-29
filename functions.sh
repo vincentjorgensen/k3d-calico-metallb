@@ -130,10 +130,15 @@ function docker-k3d-network {
 
 # Create k3d cluster "k3d-create-cluster <name> <config_file>
 function k3d-cluster-create  {
-  local config name
+  local config name _dry_run
   name=$1
   config=$2
+  _dry_run=${3:-false}
   
+  if $_dry_run; then
+    cat "$config"
+    return
+  fi
   # create docker network if it does not exist
   if ! docker-k3d-network status "$DOCKER_NETWORK"; then
     docker-k3d-network start "$DOCKER_NETWORK" "$DOCKER_SUBNET"
@@ -418,6 +423,7 @@ EOF
 # k3d cluster -m [create|delete|status] -c [cluster_name] -r <ip_range> -e <region> -s <no_of_servers> <-i enable_ambient> <-y disable_dockerproxy> <-a enable_argocd>
 function k3d-cluster {
   local _argocd _istio _ip_range _mode _cluster_name _region _no_servers _dproxy
+  local _dry_run
 
   _cluster_name=no_name
   _region=no_region
@@ -425,14 +431,17 @@ function k3d-cluster {
   _dproxy=enabled
   _istio=""
   _argocd=""
+  _dry_run=false
 
-  while getopts "ac:ie:m:r:s:y" opt; do
+  while getopts "ac:die:m:r:s:y" opt; do
     # shellcheck disable=SC2220
     case $opt in
       a) # Deploy argoCD
         _argocd='-a' ;;
       c) # Cluster name
         _cluster_name=$OPTARG ;;
+      d) # Just print out the k3d config file
+        _dry_run=true ;;
       i) # Enable istio in ambient mode
         _istio='-i' ;;
       e) # region (arbitrary)
@@ -449,6 +458,7 @@ function k3d-cluster {
   done
 
   if [[ $_mode == create ]]; then
+    
     k3d-cluster-create "$_cluster_name" <(
       jinja2                                                                  \
              -D cluster_id="$_cluster_name"                                   \
@@ -458,7 +468,8 @@ function k3d-cluster {
              -D num_of_nodes="$_no_servers"                                   \
              -D enable_dockerproxy="$_dproxy"                                 \
              "$K3D_DIR"/k3d-omni-cluster.volumes.template.yaml.j2             \
-             "$(create-feature-map -r "$_ip_range" -c "$_cluster_name" $_argocd $_istio)" )
+             "$(create-feature-map -r "$_ip_range" -c "$_cluster_name" $_argocd $_istio)" ) \
+    "$_dry_run"
   
   elif [[ $_mode == delete ]]; then
     k3d-cluster-delete "$_cluster_name"

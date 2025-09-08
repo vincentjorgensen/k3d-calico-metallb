@@ -1,0 +1,45 @@
+services:
+  registry:
+    container_name: k3d-dockerproxy
+    networks:
+      default:
+        ipv4_address: {{ registry_ip }}
+    image: ligfx/k3d-registry-dockerd:{{ ligfx_ver }}
+    restart: unless-stopped
+    ports:
+      - 0.0.0.0:50182:5000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+    - label=disable
+    tmpfs:
+    - /run
+    - /var/run
+    privileged: true
+    userns_mode: host
+    environment:
+      K3S_KUBECONFIG_OUTPUT: /output/kubeconfig.yaml
+    init: true
+    hostname: k3d-dockerproxy
+    labels:
+      app: k3d
+      k3d.cluster: ""
+      k3d.registry.host: ""
+      k3d.registry.hostIP: 0.0.0.0
+      k3d.role: registry
+      k3d.version: v5.8.3
+      k3s.registry.port.external: 50182
+      k3s.registry.port.internal: 5000
+    healthcheck:
+      #test: ["CMD", "nc", "-vz", "localhost", "5000"]
+      test: ["CMD", "wget", "-q", "localhost:5000/v2/", "-O", "/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      start_interval: 1s
+networks:
+  default:
+    name: {{ network }}
+    external: true
+    driver: bridge

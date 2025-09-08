@@ -52,8 +52,10 @@ MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 export CALICO_VER K3S_VER MLB_VER K3D_TEMPLATE
 CALICO_VER="3.30.3"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.0/manifests/calico.yaml
-K3S_VER="v1.32.8-k3s1"                    # https://hub.docker.com/r/rancher/k3s/tags
-MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags
+#K3S_VER="v1.32.8-k3s1"                    # https://hub.docker.com/r/rancher/k3s/tags
+K3S_VER="v1.33.4-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
+#MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags
+MLB_VER="v0.15.2"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
 
@@ -71,21 +73,30 @@ K8S_TRUST_DOMAIN='k8s.cluster.local'
 # Docker Desktop must be running (TBD does this work with Rancher Desktop?)
 # https://github.com/ligfx/k3d-registry-dockerd
 function dockerproxy {
-  local mode
+  local modedocker-pihole-dns-server
   mode=$1
 
   if [[ $mode == start ]]; then
-    k3d registry create -i ligfx/k3d-registry-dockerd:v0.10                   \
-      --default-network $DOCKER_NETWORK                                       \
-      -v /var/run/docker.sock:/var/run/docker.sock                            \
-      dockerproxy
+    ###local _create_log; _create_log=$(mktemp)
+    ###k3d registry create -i ligfx/k3d-registry-dockerd:v0.10                   \
+    ###  --default-network $DOCKER_NETWORK                                       \
+    ###  -v /var/run/docker.sock:/var/run/docker.sock                            \
+    ###  dockerproxy > "$_create_log" 2>&1
+
+    ###if grep -q "A registry node with that name already exists" "$_create_log"; then
+    ###  dockerproxy stop
+    ###  dockerproxy start
+    ###fi
+    docker compose -f <(jinja2 -D registry_ip=192.168.96.3 -D ligfx_ver=v0.10 -D network="$DOCKER_NETWORK" "$K3D_DIR"/registry.docker-compose.yaml.j2) --project-directory "$K3D_DIR" up -d
 
   elif [[ $mode == stop ]]; then
-    k3d registry delete k3d-dockerproxy
+    ###k3d registry delete k3d-dockerproxy
+    docker compose -f <(jinja2 -D registry_ip=192.168.96.3 -D ligfx_ver=v0.10 -D network="$DOCKER_NETWORK" "$K3D_DIR"/registry.docker-compose.yaml.j2) --project-directory "$K3D_DIR" down registry
 
   elif [[ $mode == status ]]; then
-    docker ps -f name=k3d-dockerproxy |
-      grep -E '\<k3d-dockerproxy\>' > /dev/null 2>&1
+###    docker ps -f name=k3d-dockerproxy |
+###      grep -E '\<k3d-dockerproxy\>' > /dev/null 2>&1
+    docker compose -f <(jinja2 -D registry_ip=192.168.96.3 -D ligfx_ver=v0.10 -D network="$DOCKER_NETWORK" "$K3D_DIR"/registry.docker-compose.yaml.j2) --project-directory "$K3D_DIR" ps | grep registry | grep -q healthy
   fi
   return $?
 }

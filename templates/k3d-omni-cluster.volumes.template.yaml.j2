@@ -47,10 +47,10 @@ options:
 {%- if enable_dockerproxy %}
 registries:
   use:
-    - k3d-dockerproxy:5000
+  - k3d-dockerproxy:5000
   config: |
     mirrors:
       "*":
         endpoint:
-          - "http://k3d-dockerproxy:5000"
+        - "http://k3d-dockerproxy:5000"
 {%- endif %}

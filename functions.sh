@@ -61,6 +61,7 @@ MLB_VER="v0.15.2"                          # https://github.com/metallb/metallb/
 
 # HELM and ISTIO versions
 export KGATEWAY_VER ISTIO_VER ISTIO_REPO HELM_CHART K8S_TRUST_DOMAIN
+export DOCKER_COMPOSE
 KGATEWAY_VER=v1.2.1
 ISTIO_VER=1.25.3
 HELM_REPO=us-docker.pkg.dev/soloio-img/istio-helm
@@ -68,50 +69,72 @@ ISTIO_REPO=us-docker.pkg.dev/soloio-img/istio
 #HELM_REPO=istio
 #ISTIO_REPO=istio
 K8S_TRUST_DOMAIN='k8s.cluster.local'
+DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
+
+function _create_docker_compose {
+  if [[ ! -e "$DOCKER_COMPOSE" ]]; then
+    local _k3d_ver; _k3d_ver=$(k3d version -o json |jq -r '.k3d')
+    local _internal_port _external_port _registry_ip _ligfx_ver
+    _ligfx_ver=v0.10
+    _pihole_ip=192.168.96.2
+    _registry_ip=192.168.96.3
+    _internal_port=5000
+    _external_port=$(shuf -i 50100-51000 -n 1)
+
+    jinja2 -D registry_ip="$_registry_ip"                                      \
+           -D pihole_ip="$_pihole_ip"                                          \
+           -D ligfx_ver="$_ligfx_ver"                                          \
+           -D network="$DOCKER_NETWORK"                                        \
+           -D k3d_ver="$_k3d_ver"                                              \
+           -D k3s_registry_port_internal="$_internal_port"                     \
+           -D k3s_registry_port_external="$_external_port"                     \
+           "$K3D_DIR"/docker-compose.yaml.j2                                   \
+    > "$DOCKER_COMPOSE"
+    echo '[INFO]: '"$DOCKER_COMPOSE created"
+  else
+    echo '[INFO]: '"$DOCKER_COMPOSE already exists"
+  fi
+}
 
 # k3d-registry-dockerd, a docker proxy that elimiates anonymous docker login errors in k8s
 # Docker Desktop must be running (TBD does this work with Rancher Desktop?)
 # https://github.com/ligfx/k3d-registry-dockerd
 function dockerproxy {
-  local modedocker-pihole-dns-server
-  mode=$1
+  local mode=$1
+  _create_docker_compose
 
   if [[ $mode == start ]]; then
-    ###local _create_log; _create_log=$(mktemp)
-    ###k3d registry create -i ligfx/k3d-registry-dockerd:v0.10                   \
-    ###  --default-network $DOCKER_NETWORK                                       \
-    ###  -v /var/run/docker.sock:/var/run/docker.sock                            \
-    ###  dockerproxy > "$_create_log" 2>&1
-
-    ###if grep -q "A registry node with that name already exists" "$_create_log"; then
-    ###  dockerproxy stop
-    ###  dockerproxy start
-    ###fi
-    docker compose -f <(jinja2 -D registry_ip=192.168.96.3 -D ligfx_ver=v0.10 -D network="$DOCKER_NETWORK" "$K3D_DIR"/registry.docker-compose.yaml.j2) --project-directory "$K3D_DIR" up -d
+    docker compose -f "$DOCKER_COMPOSE"                                        \
+                   --project-directory "$K3D_DIR" up registry -d
 
   elif [[ $mode == stop ]]; then
-    ###k3d registry delete k3d-dockerproxy
-    docker compose -f <(jinja2 -D registry_ip=192.168.96.3 -D ligfx_ver=v0.10 -D network="$DOCKER_NETWORK" "$K3D_DIR"/registry.docker-compose.yaml.j2) --project-directory "$K3D_DIR" down registry
+    docker compose -f "$DOCKER_COMPOSE"                                        \
+                   --project-directory "$K3D_DIR" down registry
 
   elif [[ $mode == status ]]; then
-###    docker ps -f name=k3d-dockerproxy |
-###      grep -E '\<k3d-dockerproxy\>' > /dev/null 2>&1
-    docker compose -f <(jinja2 -D registry_ip=192.168.96.3 -D ligfx_ver=v0.10 -D network="$DOCKER_NETWORK" "$K3D_DIR"/registry.docker-compose.yaml.j2) --project-directory "$K3D_DIR" ps | grep registry | grep -q healthy
+    docker compose -f "$DOCKER_COMPOSE"                                        \
+                   --project-directory "$K3D_DIR" ps registry                 |\
+      grep -q healthy
+
   fi
   return $?
 }
 
-function docker-pihole-dns-server {
-  local _mode
-  _mode=$1
+function dockerdns {
+  local _mode=$1
+  _create_docker_compose
 
   if [[ $_mode == start ]]; then
-    docker compose -f <(jinja2 -D network="$DOCKER_NETWORK" "$K3D_DIR"/pihole.docker-compose.yaml.j2) --project-directory "$K3D_DIR" up -d
+    docker compose -f "$DOCKER_COMPOSE"                                        \
+                   --project-directory "$K3D_DIR" up pihole -d
   elif [[ $_mode == stop ]]; then
     echo 
-    docker compose -f <(jinja2 -D network="$DOCKER_NETWORK" "$K3D_DIR"/pihole.docker-compose.yaml.j2) --project-directory "$K3D_DIR" down pihole
+    docker compose -f "$DOCKER_COMPOSE"                                        \
+                   --project-directory "$K3D_DIR" down pihole
   elif [[ $_mode == status ]]; then
-    docker compose -f <(jinja2 -D network="$DOCKER_NETWORK" "$K3D_DIR"/pihole.docker-compose.yaml.j2) --project-directory "$K3D_DIR" ps | grep pihole | grep -q healthy
+    docker compose -f "$DOCKER_COMPOSE"                                        \
+                   --project-directory "$K3D_DIR" ps pihole                   |\
+      grep -q healthy
   fi
   return $?
 }
@@ -159,8 +182,8 @@ function k3d-cluster-create  {
     dockerproxy start
   fi
 
-  if ! docker-pihole-dns-server status; then
-    docker-pihole-dns-server start
+  if ! dockerdns status; then
+    dockerdns start
   fi
 
   k3d cluster create --wait --config "${config}"

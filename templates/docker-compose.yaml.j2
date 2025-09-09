@@ -1,0 +1,99 @@
+---
+networks:
+  default:
+    driver: bridge
+    external: true
+    name: {{ network }}
+services:
+  registry:
+    container_name: k3d-dockerproxy
+    environment:
+      K3S_KUBECONFIG_OUTPUT: /output/kubeconfig.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      start_interval: 5s
+      #test: ["CMD", "nc", "-vz", "localhost", "{{ k3s_registry_port_internal }}"]
+      test: ["CMD", "wget", "-q", "localhost:{{ k3s_registry_port_internal }}/v2/", "-O", "/dev/null"]
+      timeout: 3s
+    hostname: k3d-dockerproxy
+    image: ligfx/k3d-registry-dockerd:{{ ligfx_ver }}
+    init: true
+    labels:
+      app: k3d
+      k3d.cluster: ""
+      k3d.registry.host: ""
+      k3d.registry.hostIP: 0.0.0.0
+      k3d.role: registry
+      k3d.version: {{ k3d_ver }}
+      k3s.registry.port.external: {{ k3s_registry_port_external }}
+      k3s.registry.port.internal: {{ k3s_registry_port_internal }}
+    networks:
+      default:
+        ipv4_address: {{ registry_ip }}
+    ports:
+    - name: registry
+      target: {{ k3s_registry_port_internal }}
+      published: "{{ k3s_registry_port_external }}"
+      host_ip: 0.0.0.0
+      protocol: tcp
+    privileged: true
+    restart: unless-stopped
+    security_opt:
+    - label=disable
+    tmpfs:
+    - /run
+    - /var/run
+    userns_mode: host
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:rw
+    - /etc/localtime:/etc/localtime:ro
+  ##############################################################################
+  # PiHole for External Dns
+  # More info at https://github.com/pi-hole/docker-pi-hole/ and
+  # https://docs.pi-hole.net/
+  ##############################################################################
+  pihole:
+    networks:
+      default:
+        ipv4_address: {{ pihole_ip }}
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+    # DNS Ports
+    - "0.0.0.0:53:53/tcp"
+    - "0.0.0.0:53:53/udp"
+    # Default HTTP Port
+    - "0.0.0.0:80:80/tcp"
+    # Default HTTPs Port. FTL will generate a self-signed certificate
+    - "0.0.0.0:443:443/tcp"
+    # Uncomment the below if using Pi-hole as your DHCP Server
+    #- "0.0.0.0:67:67/udp"
+    # Uncomment the line below if you are using Pi-hole as your NTP server
+    #- "0.0.0.0:123:123/udp"
+    environment:
+      # Set the appropriate timezone for your location from
+      # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones, e.g:
+      TZ: 'America/Los_Angeles'
+      # Set a password to access the web interface. Not setting one will result in a random password being assigned
+      FTLCONF_webserver_api_password: 'SicTransitGloriaMundi'
+      # If using Docker's default `bridge` network setting the dns listening mode should be set to 'all'
+      FTLCONF_dns_listeningMode: 'all'
+    # Volumes store your data between container upgrades
+    volumes:
+    # For persisting Pi-hole's databases and common configuration file
+    - './etc-pihole:/etc/pihole'
+    - /etc/localtime:/etc/localtime:ro
+    # Uncomment the below if you have custom dnsmasq config files that you want to persist. Not needed for most starting fresh with Pi-hole v6. If you're upgrading from v5 you and have used this directory before, you should keep it enabled for the first v6 container start to allow for a complete migration. It can be removed afterwards. Needs environment variable FTLCONF_misc_etc_dnsmasq_d: 'true'
+    #- './etc-dnsmasq.d:/etc/dnsmasq.d'
+    cap_add:
+    # See https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    # Required if you are using Pi-hole as your DHCP server, else not needed
+    - NET_ADMIN
+    # Required if you are using Pi-hole as your NTP client to be able to set the host's system time
+    - SYS_TIME
+    # Optional, if Pi-hole should get some more processing time
+    - SYS_NICE
+    restart: unless-stopped
+...

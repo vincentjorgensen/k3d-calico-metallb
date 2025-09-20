@@ -50,6 +50,25 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock:rw
     - /etc/localtime:/etc/localtime:ro
   ##############################################################################
+  # Helloworld for texting external backends
+  ##############################################################################
+  helloworld:
+    container_name: helloworld
+    image: vincentjorgensen/node-helloworld:0.0.3
+    networks:
+      default:
+        ipv4_address: 192.168.96.19
+    ports:
+    - "0.0.0.0:50375:8080/tcp"
+    restart: unless-stopped
+    environment:
+      SERVICE_VERSION: d100
+      ZONE: local-1
+      REGION: local
+      SERVER_PORT: 8080
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+  ##############################################################################
   # PiHole for External Dns
   # More info at https://github.com/pi-hole/docker-pi-hole/ and
   # https://docs.pi-hole.net/
@@ -65,13 +84,13 @@ services:
     - "0.0.0.0:53:53/tcp"
     - "0.0.0.0:53:53/udp"
     # Default HTTP Port
-    - "0.0.0.0:80:80/tcp"
+    - "0.0.0.0:8080:80/tcp"
     # Default HTTPs Port. FTL will generate a self-signed certificate
-    - "0.0.0.0:443:443/tcp"
+    - "0.0.0.0:8443:443/tcp"
     # Uncomment the below if using Pi-hole as your DHCP Server
-    #- "0.0.0.0:67:67/udp"
+    #- "0.0.0.0:8067:67/udp"
     # Uncomment the line below if you are using Pi-hole as your NTP server
-    #- "0.0.0.0:123:123/udp"
+    #- "0.0.0.0:8123:123/udp"
     environment:
       # Set the appropriate timezone for your location from
       # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones, e.g:

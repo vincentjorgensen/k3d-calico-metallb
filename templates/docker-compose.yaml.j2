@@ -54,20 +54,25 @@ services:
   ##############################################################################
   helloworld:
     container_name: helloworld
-    image: vincentjorgensen/node-helloworld:0.0.3
+    image: vincentjorgensen/node-helloworld:0.0.5
     networks:
       default:
-        ipv4_address: 192.168.96.19
+        ipv4_address: {{ helloworld_ip }}
     ports:
     - "0.0.0.0:50375:8080/tcp"
+    - "0.0.0.0:50376:8443/tcp"
     restart: unless-stopped
     environment:
       SERVICE_VERSION: d100
       ZONE: local-1
       REGION: local
       SERVER_PORT: 8080
+      SERVER_SSL_PORT: 8443
+      SSL_KEY: /ssl/root.key
+      SSL_CERT: /ssl/root.crt
     volumes:
     - /etc/localtime:/etc/localtime:ro
+    - {{ dir }}/templates/example-ssl:/ssl:ro
   ##############################################################################
   # PiHole for External Dns
   # More info at https://github.com/pi-hole/docker-pi-hole/ and

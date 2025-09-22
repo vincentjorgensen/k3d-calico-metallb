@@ -69,30 +69,35 @@ ISTIO_REPO=us-docker.pkg.dev/soloio-img/istio
 #HELM_REPO=istio
 #ISTIO_REPO=istio
 K8S_TRUST_DOMAIN='k8s.cluster.local'
-DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
+
+# Docker Compose for PiHole and Docker Registry Proxy
+export KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
+export PIHOLE_IP=192.168.96.2
+export REGISTRY_IP=192.168.96.3
+export HELLOWORLD_IP=192.168.96.19
+export LIGFX_VER=v0.10
 
 function _create_docker_compose {
-  if [[ ! -e "$DOCKER_COMPOSE" ]]; then
+  if [[ ! -e "$KCM_DOCKER_COMPOSE" ]]; then
     local _k3d_ver; _k3d_ver=$(k3d version -o json |jq -r '.k3d')
-    local _internal_port _external_port _registry_ip _ligfx_ver
-    _ligfx_ver=v0.10
-    _pihole_ip=192.168.96.2
-    _registry_ip=192.168.96.3
+    local _internal_port _external_port 
     _internal_port=5000
     _external_port=$(shuf -i 50100-51000 -n 1)
 
-    jinja2 -D registry_ip="$_registry_ip"                                      \
-           -D pihole_ip="$_pihole_ip"                                          \
-           -D ligfx_ver="$_ligfx_ver"                                          \
+    jinja2 -D registry_ip="$REGISTRY_IP"                                       \
+           -D pihole_ip="$PIHOLE_IP"                                           \
+           -D helloworld_ip="$HELLOWORLD_IP"                                   \
+           -D ligfx_ver="$LIGFX_VER"                                           \
            -D network="$DOCKER_NETWORK"                                        \
            -D k3d_ver="$_k3d_ver"                                              \
            -D k3s_registry_port_internal="$_internal_port"                     \
            -D k3s_registry_port_external="$_external_port"                     \
+           -D dir="$SCRIPT_DIR"                                                \
            "$K3D_DIR"/docker-compose.yaml.j2                                   \
-    > "$DOCKER_COMPOSE"
-    echo '[INFO]: '"$DOCKER_COMPOSE created"
+    > "$KCM_DOCKER_COMPOSE"
+    echo 'INFO[S002]: '"KCM: $KCM_DOCKER_COMPOSE created"
   else
-    echo '[INFO]: '"$DOCKER_COMPOSE already exists"
+    echo 'INFO[S002]: '"KCM: $KCM_DOCKER_COMPOSE already exists"
   fi
 }
 
@@ -101,18 +106,19 @@ function _create_docker_compose {
 # https://github.com/ligfx/k3d-registry-dockerd
 function dockerproxy {
   local mode=$1
+
   _create_docker_compose
 
   if [[ $mode == start ]]; then
-    docker compose -f "$DOCKER_COMPOSE"                                        \
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" up registry -d
 
   elif [[ $mode == stop ]]; then
-    docker compose -f "$DOCKER_COMPOSE"                                        \
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" down registry
 
   elif [[ $mode == status ]]; then
-    docker compose -f "$DOCKER_COMPOSE"                                        \
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" ps registry                 |\
       grep -q healthy
 
@@ -125,14 +131,14 @@ function dockerdns {
   _create_docker_compose
 
   if [[ $_mode == start ]]; then
-    docker compose -f "$DOCKER_COMPOSE"                                        \
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" up pihole -d
   elif [[ $_mode == stop ]]; then
     echo 
-    docker compose -f "$DOCKER_COMPOSE"                                        \
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" down pihole
   elif [[ $_mode == status ]]; then
-    docker compose -f "$DOCKER_COMPOSE"                                        \
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" ps pihole                   |\
       grep -q healthy
   fi

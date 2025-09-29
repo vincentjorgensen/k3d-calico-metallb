@@ -77,8 +77,9 @@ export REGISTRY_IP=192.168.96.3
 export HELLOWORLD_IP=192.168.96.19
 export LIGFX_VER=v0.10
 
+# shellcheck disable=SC2120
 function _create_docker_compose {
-  if [[ ! -e "$KCM_DOCKER_COMPOSE" ]]; then
+  if [[ ! -e "$KCM_DOCKER_COMPOSE" || -n "$1" ]]; then
     local _k3d_ver; _k3d_ver=$(k3d version -o json |jq -r '.k3d')
     local _internal_port _external_port 
     _internal_port=5000
@@ -140,6 +141,25 @@ function dockerdns {
   elif [[ $_mode == status ]]; then
     docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" ps pihole                   |\
+      grep -q healthy
+  fi
+  return $?
+}
+
+function remotehelloworld {
+  local _mode=$1
+  _create_docker_compose
+
+  if [[ $_mode == start ]]; then
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
+                   --project-directory "$K3D_DIR" up helloworld -d
+  elif [[ $_mode == stop ]]; then
+    echo 
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
+                   --project-directory "$K3D_DIR" down helloworld
+  elif [[ $_mode == status ]]; then
+    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
+                   --project-directory "$K3D_DIR" ps helloworld               |\
       grep -q healthy
   fi
   return $?

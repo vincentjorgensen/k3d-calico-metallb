@@ -21,6 +21,8 @@ export IP_RANGE_30 IP_RANGE_50 IP_RANGE_70 IP_RANGE_90 IP_RANGE_110
 export IP_RANGE_120 IP_RANGE_130 IP_RANGE_140 IP_RANGE_150 IP_RANGE_160
 export IP_RANGE_170 IP_RANGE_180 IP_RANGE_190
 DOCKER_NETWORK=k3d-cluster-network
+# If using Rancher Desktop, the following is needed b/c it doesn't set it itself
+#DOCKER_NETWORK_GATEWAY=192.168.96.1
 DOCKER_SUBNET=192.168.96.0/24
 IP_RANGE_20=192.168.96.20-192.168.96.29
 IP_RANGE_30=192.168.96.30-192.168.96.39
@@ -171,12 +173,17 @@ function docker-k3d-network {
   network=$2
   subnet=$3
 
-  # Note: https://github.com/chipmk/docker-mac-net-connect/issues/48
   if [[ $mode == start ]]; then
-    docker network create "$network"                                          \
-      --subnet "$subnet"                                                      \
-      --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"     \
+    docker network create "$network"                                           \
+      --subnet "$subnet"                                                       \
     > /dev/null 2>&1
+
+  # Note: https://github.com/chipmk/docker-mac-net-connect/issues/48
+  #    --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"     \
+
+# If using Rancher Desktop, the following is needed b/c it doesn't set it itself
+# Be sure to uncomment in the section above
+#      --gateway "$DOCKER_NETWORK_GATEWAY"                                      \
 
   elif [[ $mode == stop ]]; then
     docker network rm "$network" > /dev/null 2>&1

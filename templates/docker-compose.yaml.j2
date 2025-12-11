@@ -54,10 +54,10 @@ services:
   ##############################################################################
   helloworld:
     container_name: helloworld
-    image: vincentjorgensen/rust-helloworld:0.1.1
+    image: vincentjorgensen/rust-helloworld:0.1.2
     networks:
       default:
-        ipv4_address: {{ helloworld_ip }}
+        ipv4_address: {{ helloworld_ip0 }}
     ports:
     - "0.0.0.0:50375:8080/tcp"
     - "0.0.0.0:50376:8443/tcp"
@@ -65,6 +65,48 @@ services:
     environment:
       SERVICE_VERSION: d100
       ZONE: local-1
+      REGION: local
+      SERVER_PORT: 8080
+      SERVER_SSL_PORT: 8443
+      SSL_KEY: /ssl/root.key
+      SSL_CERT: /ssl/root.crt
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - {{ dir }}/templates/example-ssl:/ssl:ro
+  helloworld2:
+    container_name: helloworld2
+    image: vincentjorgensen/rust-helloworld:0.1.2
+    networks:
+      default:
+        ipv4_address: {{ helloworld_ip1 }}
+    ports:
+    - "0.0.0.0:50377:8080/tcp"
+    - "0.0.0.0:50378:8443/tcp"
+    restart: unless-stopped
+    environment:
+      SERVICE_VERSION: d200
+      ZONE: local-2
+      REGION: local
+      SERVER_PORT: 8080
+      SERVER_SSL_PORT: 8443
+      SSL_KEY: /ssl/root.key
+      SSL_CERT: /ssl/root.crt
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - {{ dir }}/templates/example-ssl:/ssl:ro
+  helloworld3:
+    container_name: helloworld3
+    image: vincentjorgensen/rust-helloworld:0.1.2
+    networks:
+      default:
+        ipv4_address: {{ helloworld_ip2 }}
+    ports:
+    - "0.0.0.0:50379:8080/tcp"
+    - "0.0.0.0:50380:8443/tcp"
+    restart: unless-stopped
+    environment:
+      SERVICE_VERSION: d300
+      ZONE: local-3
       REGION: local
       SERVER_PORT: 8080
       SERVER_SSL_PORT: 8443

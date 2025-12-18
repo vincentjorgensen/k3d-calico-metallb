@@ -1,0 +1,12 @@
+---
+apiVersion: crd.projectcalico.org/v1
+kind: IPPool
+metadata:
+  name: default-ipv4-ippool
+spec:
+  cidr: $CALICO_ADDY_RANGE
+  ipipMode: Never
+  natOutgoing: false
+  disabled: false
+  nodeSelector: all()
+...

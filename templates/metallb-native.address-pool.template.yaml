@@ -16,3 +16,4 @@ metadata:
 spec:
   ipAddressPools:
   - k3d
+...

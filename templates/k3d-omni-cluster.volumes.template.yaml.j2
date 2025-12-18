@@ -30,6 +30,12 @@ options:
     - arg: --disable=traefik
       nodeFilters:
       - server:*
+    - arg: --cluster-cidr={{ cluster_cidr }}
+      nodeFilters:
+      - server:*
+    - arg: --service-cidr={{ service_cidr }}
+      nodeFilters:
+      - server:*
     nodeLabels:
     - label: topology.kubernetes.io/region={{ k3d_region }}
       nodeFilters:
@@ -47,10 +53,10 @@ options:
 {%- if enable_dockerproxy %}
 registries:
   use:
-  - k3d-dockerproxy:5000
+  - {{ registry }}:5000
   config: |
     mirrors:
       "*":
         endpoint:
-        - "http://k3d-dockerproxy:5000"
+        - "http://{{ registry }}:5000"
 {%- endif %}

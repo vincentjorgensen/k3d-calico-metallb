@@ -2,7 +2,7 @@
 
 SCRIPT_DIR=$(dirname "$0")
 
-# k3d (k8s) cluster names
+# k3d (k8s is the k8s server) cluster names
 export MGMT CLUSTER1 CLUSTER2 CLUSTER3 CLUSTER4 DEMO DEMO1
 DEMO=demo
 DEMO1=demo1
@@ -14,40 +14,51 @@ CLUSTER4=cluster4
 ARGOCD=argocd
 
 # Docker network and subnet plus IP ranges
-# The IP ranges must be in the subnet cidr
-export DOCKER_NETWORK DOCKER_SUBNET 
-export IP_RANGE_20 IP_RANGE_40 IP_RANGE_60 IP_RANGE_80 IP_RANGE_100
-export IP_RANGE_30 IP_RANGE_50 IP_RANGE_70 IP_RANGE_90 IP_RANGE_110
-export IP_RANGE_120 IP_RANGE_130 IP_RANGE_140 IP_RANGE_150 IP_RANGE_160
-export IP_RANGE_170 IP_RANGE_180 IP_RANGE_190
+export MLB_CIDR1 MLB_CIDR2 MLB_CIDR3 MLB_CIDR4 MLB_CIDR5 MLB_CIDR6 MLB_CIDR7
+export MLB_CIDR8 NETWORK SUBNET DOCKER_NETWORK
+export CLUSTER_CIDR1 CLUSTER_CIDR2 CLUSTER_CIDR3 CLUSTER_CIDR4
+export CLUSTER_CIDR5 CLUSTER_CIDR6 CLUSTER_CIDR7 CLUSTER_CIDR8
+export SERVICE_CIDR1 SERVICE_CIDR2 SERVICE_CIDR3 SERVICE_CIDR4
+export SERVICE_CIDR5 SERVICE_CIDR6 SERVICE_CIDR7 SERVICE_CIDR8
+
 DOCKER_NETWORK=k3d-cluster-network
-# If using Rancher Desktop, the following is needed b/c it doesn't set it itself
-#DOCKER_NETWORK_GATEWAY=192.168.96.1
-DOCKER_SUBNET=192.168.96.0/24
-IP_RANGE_20=192.168.96.20-192.168.96.29
-IP_RANGE_30=192.168.96.30-192.168.96.39
-IP_RANGE_40=192.168.96.40-192.168.96.49
-IP_RANGE_50=192.168.96.50-192.168.96.59
-IP_RANGE_60=192.168.96.60-192.168.96.69
-IP_RANGE_70=192.168.96.70-192.168.96.79
-IP_RANGE_80=192.168.96.80-192.168.96.89
-IP_RANGE_90=192.168.96.90-192.168.96.99
-IP_RANGE_100=192.168.96.100-192.168.96.109
-IP_RANGE_110=192.168.96.110-192.168.96.119
-IP_RANGE_120=192.168.96.120-192.168.96.129
-IP_RANGE_130=192.168.96.130-192.168.96.139
-IP_RANGE_140=192.168.96.140-192.168.96.149
-IP_RANGE_150=192.168.96.150-192.168.96.159
-IP_RANGE_160=192.168.96.160-192.168.96.169
-IP_RANGE_170=192.168.96.170-192.168.96.179
-IP_RANGE_180=192.168.96.180-192.168.96.189
-IP_RANGE_190=192.168.96.190-192.168.96.199
+NETWORK_SUBNET=10.0.0.0/8
+NETWORK_GATEWAY=10.0.0.1
+
+# MLB (external LB) cidrs 14 possible lbs
+MLB_CIDR1=10.10.96.16/28
+MLB_CIDR2=10.10.96.32/28
+MLB_CIDR3=10.10.96.48/28
+MLB_CIDR4=10.10.96.64/28
+MLB_CIDR5=10.10.96.80/28
+MLB_CIDR6=10.10.96.96/28
+MLB_CIDR7=10.10.96.112/28
+MLB_CIDR8=10.10.96.128/28
+
+# Cluster(Pod) and Service cidrs 65534 possible addresses per slice
+CLUSTER_CIDR1=10.42.0.0/16
+SERVICE_CIDR1=10.43.0.0/16
+CLUSTER_CIDR2=10.44.0.0/16
+SERVICE_CIDR2=10.45.0.0/16
+CLUSTER_CIDR3=10.46.0.0/16
+SERVICE_CIDR3=10.47.0.0/16
+CLUSTER_CIDR4=10.48.0.0/16
+SERVICE_CIDR4=10.49.0.0/16
+CLUSTER_CIDR5=10.50.0.0/16
+SERVICE_CIDR5=10.51.0.0/16
+CLUSTER_CIDR6=10.52.0.0/16
+SERVICE_CIDR6=10.53.0.0/16
+CLUSTER_CIDR7=10.54.0.0/16
+SERVICE_CIDR7=10.55.0.0/16
+CLUSTER_CIDR8=10.56.0.0/16
+SERVICE_CIDR8=10.57.0.0/16
 
 # K3D names and places
-export K3D_DIR MLB_ADDY_POOL MLB_ADDY_RANGE CLUSTER_ID
+export K3D_DIR MLB_ADDY_POOL MLB_ADDY_RANGE CLUSTER_ID CALICO_ADDY_RANGE CALICO_ADDY_POOL
 export MLB_TEMP AMBIENT_TEMP KGATEWAY_TEMP CA_CERT_TEMP ISTIO_SYSTEM_NS_TEMP
 export EW_GATEWAY_TEMP
 K3D_DIR=$SCRIPT_DIR/templates
+CALICO_ADDY_POOL="${K3D_DIR}/calico.address-pool.template.yaml"
 MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 
 # k8s cluster versions
@@ -55,7 +66,7 @@ export CALICO_VER K3S_VER MLB_VER K3D_TEMPLATE
 CALICO_VER="3.30.3"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.0/manifests/calico.yaml
 #K3S_VER="v1.32.8-k3s1"                    # https://hub.docker.com/r/rancher/k3s/tags
-K3S_VER="v1.33.4-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
+K3S_VER="v1.33.6-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
 #MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags
 MLB_VER="v0.15.2"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
@@ -68,15 +79,15 @@ KGATEWAY_VER=v1.2.1
 ISTIO_VER=1.25.3
 HELM_REPO=us-docker.pkg.dev/soloio-img/istio-helm
 ISTIO_REPO=us-docker.pkg.dev/soloio-img/istio
-#HELM_REPO=istio
-#ISTIO_REPO=istio
 K8S_TRUST_DOMAIN='k8s.cluster.local'
 
 # Docker Compose for PiHole and Docker Registry Proxy
 export KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
-export PIHOLE_IP=192.168.96.2
-export REGISTRY_IP=192.168.96.3
-export HELLOWORLD_IP=192.168.96.19
+export PIHOLE_IP=10.10.96.2
+export REGISTRY_IP=10.10.96.3
+export HELLOWORLD_IP0=10.10.96.17
+export HELLOWORLD_IP1=10.10.96.18
+export HELLOWORLD_IP2=10.10.96.19
 export LIGFX_VER=v0.10
 
 # shellcheck disable=SC2120
@@ -89,7 +100,9 @@ function _create_docker_compose {
 
     jinja2 -D registry_ip="$REGISTRY_IP"                                       \
            -D pihole_ip="$PIHOLE_IP"                                           \
-           -D helloworld_ip="$HELLOWORLD_IP"                                   \
+           -D helloworld_ip0="$HELLOWORLD_IP0"                                 \
+           -D helloworld_ip1="$HELLOWORLD_IP1"                                 \
+           -D helloworld_ip2="$HELLOWORLD_IP2"                                 \
            -D ligfx_ver="$LIGFX_VER"                                           \
            -D network="$DOCKER_NETWORK"                                        \
            -D k3d_ver="$_k3d_ver"                                              \
@@ -176,14 +189,11 @@ function docker-k3d-network {
   if [[ $mode == start ]]; then
     docker network create "$network"                                           \
       --subnet "$subnet"                                                       \
+      --gateway "$NETWORK_GATEWAY"                                             \
     > /dev/null 2>&1
 
   # Note: https://github.com/chipmk/docker-mac-net-connect/issues/48
   #    --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"     \
-
-# If using Rancher Desktop, the following is needed b/c it doesn't set it itself
-# Be sure to uncomment in the section above
-#      --gateway "$DOCKER_NETWORK_GATEWAY"                                      \
 
   elif [[ $mode == stop ]]; then
     docker network rm "$network" > /dev/null 2>&1
@@ -208,7 +218,7 @@ function k3d-cluster-create  {
   fi
   # create docker network if it does not exist
   if ! docker-k3d-network status "$DOCKER_NETWORK"; then
-    docker-k3d-network start "$DOCKER_NETWORK" "$DOCKER_SUBNET"
+    docker-k3d-network start "$DOCKER_NETWORK" "$NETWORK_SUBNET"
   fi
 
   if ! dockerproxy status; then
@@ -218,6 +228,9 @@ function k3d-cluster-create  {
   if ! dockerdns status; then
     dockerdns start
   fi
+
+###  cat "$config"
+###  return
 
   k3d cluster create --wait --config "${config}"
 
@@ -242,15 +255,26 @@ function k3d-cluster-delete {
   kubectl config delete-context "$name" > /dev/null 2>&1 || true
 }
 
+function calico-ippool-template-create {
+  local _temp _pod_ip_range
+  _pod_ip_range=$1
+  _temp=$(mktemp)
+
+  CALICO_ADDY_RANGE=$_pod_ip_range
+  envsubst < "$CALICO_ADDY_POOL" > "$_temp"
+
+  echo -n "$_temp"
+}
+
 function mlb-template-create {
-  local temp ip_range
-  ip_range=$1
-  temp=$(mktemp)
+  local _temp _ip_range
+  _ip_range=$1
+  _temp=$(mktemp)
 
-  MLB_ADDY_RANGE=$ip_range
-  envsubst < "$MLB_ADDY_POOL" > "$temp"
+  MLB_ADDY_RANGE=$_ip_range
+  envsubst < "$MLB_ADDY_POOL" > "$_temp"
 
-  echo -n "$temp"
+  echo -n "$_temp"
 }
 
 function tls-cert-secret-create {
@@ -412,7 +436,7 @@ function ew-gateway-create {
 
 function create-feature-map {
   local _calico _mlb _istio _ew _ip_range _argocd _cluster_name _pihole
-  local _temp _argocd_temp
+  local _temp _argocd_temp _pod_ip_range
 
   _temp=$(mktemp)
 
@@ -425,7 +449,7 @@ function create-feature-map {
   _ew=false
   _argocd=false
 
-  while getopts "ac:ir:" opt; do
+  while getopts "ac:ip:r:" opt; do
     # shellcheck disable=SC2220
     case $opt in
       a)
@@ -434,6 +458,8 @@ function create-feature-map {
         _cluster_name=$OPTARG ;;
       i)
         _istio=true ;;
+      p)
+        _pod_ip_range=$OPTARG ;;
       r)
         _ip_range=$OPTARG ;;
     esac
@@ -446,12 +472,13 @@ EOF
   if $_calico; then
     cat <<EOF >> "$_temp"
   ${K3D_DIR}/calico-${CALICO_VER}.yaml: 00-calico.yaml
+  $(calico-ippool-template-create "$_pod_ip_range"): 01-calico.yaml
 EOF
   fi
   # Pihole
   if $_pihole; then
     cat <<EOF >> "$_temp"
-  ${K3D_DIR}/configmap.coredns.pihole.yaml: 01-pihole.yaml
+  ${K3D_DIR}/configmap.coredns.pihole.yaml: 05-pihole.yaml
 EOF
   fi
   # Metal LB
@@ -490,6 +517,7 @@ EOF
 # k3d cluster -m [create|delete|status] -c [cluster_name] -r <ip_range> -e <region> -s <no_of_servers> <-i enable_ambient> <-y disable_dockerproxy> <-a enable_argocd>
 function k3d-cluster {
   local _argocd _istio _ip_range _mode _cluster_name _region _no_servers _dproxy
+  local _cluster_cidr _service_cidr
   local _dry_run
 
   _cluster_name=no_name
@@ -500,7 +528,7 @@ function k3d-cluster {
   _argocd=""
   _dry_run=false
 
-  while getopts "ac:die:m:r:s:y" opt; do
+  while getopts "ac:die:m:p:q:r:s:y" opt; do
     # shellcheck disable=SC2220
     case $opt in
       a) # Deploy argoCD
@@ -513,6 +541,10 @@ function k3d-cluster {
         _istio='-i' ;;
       e) # region (arbitrary)
         _region=$OPTARG ;;
+      p) # Cluster Cidr for the pods
+        _cluster_cidr=$OPTARG ;;
+      q) # Cluster Cidr for the services
+        _service_cidr=$OPTARG ;;
       r) # IP range for MLB
         _ip_range=$OPTARG ;;
       m) # Create, delete, status
@@ -524,18 +556,24 @@ function k3d-cluster {
     esac
   done
 
+  local _d_network=$DOCKER_NETWORK
+  local _registry=k3d-dockerproxy
+
   if [[ $_mode == create ]]; then
     
     k3d-cluster-create "$_cluster_name" <(
       jinja2                                                                  \
              -D cluster_id="$_cluster_name"                                   \
-             -D docker_network="$DOCKER_NETWORK"                              \
+             -D docker_network="$_d_network"                                  \
              -D k3d_region="$_region"                                         \
              -D k3s_ver="$K3S_VER"                                            \
              -D num_of_nodes="$_no_servers"                                   \
              -D enable_dockerproxy="$_dproxy"                                 \
+             -D cluster_cidr="$_cluster_cidr"                                 \
+             -D service_cidr="$_service_cidr"                                 \
+             -D registry="$_registry"                                         \
              "$K3D_DIR"/k3d-omni-cluster.volumes.template.yaml.j2             \
-             "$(create-feature-map -r "$_ip_range" -c "$_cluster_name" $_argocd $_istio)" ) \
+             "$(create-feature-map -p "$_cluster_cidr" -r "$_ip_range" -c "$_cluster_name" $_argocd $_istio)" ) \
     "$_dry_run"
   
   elif [[ $_mode == delete ]]; then
@@ -548,39 +586,46 @@ function k3d-cluster {
 }
 
 # DEMO clusters. No istio
-alias d0up3="k3d-cluster -m create -c \$DEMO -r \$IP_RANGE_100 -e us-west-1 -s 3"
+alias d0up3="k3d-cluster -m create -c \$DEMO -r \$MLB_CIDR7 -p \$CLUSTER_CIDR7 -q \$SERVICE_CIDR7 -e us-west-1 -s 3"
 alias d0down="k3d-cluster -m delete -c \$DEMO"
-alias d1up="k3d-cluster -m create -c \$DEMO1 -r \$IP_RANGE_110 -e us-west-1"
+alias d1up="k3d-cluster -m create -c \$DEMO1 -r \$MLB_CIDR8 -p \$CLUSTER_CIDR8 -q \$SERVICE_CIDR8 -e us-west-1"
 alias d1down="k3d-cluster -m delete -c \$DEMO1"
 
 # MGMT cluster. No istio
-alias m0up="k3d-cluster -m create -c \$MGMT -r \$IP_RANGE_120 -e us-west-2"
+alias m0up="k3d-cluster -m create -c \$MGMT -r \$MLB_CIDR6 -p \$CLUSTER_CIDR6 -q \$SERVICE_CIDR6 -e us-west-2"
 alias m0down="k3d-cluster -m delete -c \$MGMT"
 
 # CLUSTER clusters. Ambient enabled with 'a' otherwise, vanilla
 # _np is without dockerproxy
-alias c1up3a="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2 -s 3 -i"
-alias c1up="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2"
-alias c1up3="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2 -s 3"
-alias c1up_np="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2 -y"
-alias c1down="k3d-cluster -m delete -c \$CLUSTER1"
-alias c2upa="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2 -i"
-alias c2up="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2"
-alias c2up3="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2 -s 3"
-alias c2up_np="k3d-cluster -m create -c \$CLUSTER2 -r \$IP_RANGE_40 -e us-east-2 -y"
-alias c2down="k3d-cluster -m delete -c \$CLUSTER2"
-alias c3upa="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-1 -i"
-alias c3up="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-1"
-alias c3up_np="k3d-cluster -m create -c \$CLUSTER3 -r \$IP_RANGE_50 -e us-west-1 -y"
-alias c3down="k3d-cluster -m delete -c \$CLUSTER3"
-alias c4upa="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-1 -i"
-alias c4up="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-1"
-alias c4up_np="k3d-cluster -m create -c \$CLUSTER4 -r \$IP_RANGE_60 -e us-east-1 -y"
-alias c4down="k3d-cluster -m delete -c \$CLUSTER4"
+alias c1up=    "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2"
+alias c1up3a=  "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -s 3 -i"
+alias c1up3=   "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -s 3"
+alias c1up_np= "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -y"
+alias c1down=  "k3d-cluster -m delete -c \$CLUSTER1"
+alias c1u=c1up
+
+alias c2up=    "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2"
+alias c2upa=   "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -i"
+alias c2up3=   "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -s 3"
+alias c2up_np= "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -y"
+alias c2down=  "k3d-cluster -m delete -c \$CLUSTER2"
+alias c2u=c2up
+
+alias c3up=    "k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1"
+alias c3upa=   "k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1 -i"
+alias c3up_np= "k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1 -y"
+alias c3down=  "k3d-cluster -m delete -c \$CLUSTER3"
+alias c3u=c3up
+
+alias c4up=    "k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1"
+alias c4upa=   "k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1 -i"
+alias c4up_np= "k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1 -y"
+alias c4down=  "k3d-cluster -m delete -c \$CLUSTER4"
+alias c4u=c4up
 
 # ArgoCD
-alias a0up="k3d-cluster -m create -c \$ARGOCD -r \$IP_RANGE_100 -e us-west-2 -a"
-alias a0down="k3d-cluster -m delete -c \$ARGOCD"
+alias a0up=    "k3d-cluster -m create -c \$ARGOCD -r \$MLB_CIDR5 -p \$CLUSTER_CIDR5 -q \$SERVICE_CIDR5 -e us-west-2 -a"
+alias a0down=  "k3d-cluster -m delete -c \$ARGOCD"
 
 # Cluster resets
 function c1j { c1down;c1up; }

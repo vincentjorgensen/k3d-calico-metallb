@@ -4,9 +4,13 @@ kind: IPPool
 metadata:
   name: default-ipv4-ippool
 spec:
+  allowedUses:
+  - Workload
+  - Tunnel
   cidr: $CALICO_ADDY_RANGE
   ipipMode: Never
-  natOutgoing: false
+  natOutgoing: true
   disabled: false
   nodeSelector: all()
+  vxlanMode: Never
 ...

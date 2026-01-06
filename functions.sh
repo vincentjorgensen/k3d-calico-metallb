@@ -2,7 +2,7 @@
 
 SCRIPT_DIR=$(dirname "$0")
 
-# k3d (k8s is the k8s server) cluster names
+# k3d (k8s is the k8s server image) cluster names
 export MGMT CLUSTER1 CLUSTER2 CLUSTER3 CLUSTER4 DEMO DEMO1
 DEMO=demo
 DEMO1=demo1
@@ -22,20 +22,25 @@ export SERVICE_CIDR1 SERVICE_CIDR2 SERVICE_CIDR3 SERVICE_CIDR4
 export SERVICE_CIDR5 SERVICE_CIDR6 SERVICE_CIDR7 SERVICE_CIDR8
 
 DOCKER_NETWORK=k3d-cluster-network
-NETWORK_SUBNET=10.0.0.0/8
-NETWORK_GATEWAY=10.0.0.1
+#NETWORK_SUBNET=192.168.96.0/24
+#NETWORK_GATEWAY=192.168.96.1
+#CONTAINER_SUBNET=192.168.96.192/26 # For containers on the docker network
+NETWORK_SUBNET=10.10.0.0/16
+NETWORK_GATEWAY=10.10.0.1
+CONTAINER_SUBNET=10.10.97.0/24 # For containers on the docker network
 
-# MLB (external LB) cidrs 14 possible lbs
-MLB_CIDR1=10.10.96.16/28
+# MLB (external LB) cidrs 14 possible LBs
+MLB_CIDR1=10.10.96.16/28  # HostMin: 10.10.96.17
 MLB_CIDR2=10.10.96.32/28
 MLB_CIDR3=10.10.96.48/28
 MLB_CIDR4=10.10.96.64/28
 MLB_CIDR5=10.10.96.80/28
 MLB_CIDR6=10.10.96.96/28
-MLB_CIDR7=10.10.96.112/28
+MLB_CIDR7=10.10.96.112/28 # HostMin: 10.10.96.113
 MLB_CIDR8=10.10.96.128/28
 
-# Cluster(Pod) and Service cidrs 65534 possible addresses per slice
+
+# Cluster (Pod) and Service CIDRs 65534 possible addresses per slice
 CLUSTER_CIDR1=10.42.0.0/16
 SERVICE_CIDR1=10.43.0.0/16
 CLUSTER_CIDR2=10.44.0.0/16
@@ -54,6 +59,10 @@ CLUSTER_CIDR8=10.56.0.0/16
 SERVICE_CIDR8=10.57.0.0/16
 
 # K3D names and places
+# Calico is required in lieu of Traefik for Istio Ambient
+# MetalLb with docker-mac-net-connect allows directly addressable external IPs
+# metallb: https://github.com/metallb/metallb
+# docker-mac-net-connect: https://github.com/chipmk/docker-mac-net-connect
 export K3D_DIR MLB_ADDY_POOL MLB_ADDY_RANGE CLUSTER_ID CALICO_ADDY_RANGE CALICO_ADDY_POOL
 export MLB_TEMP AMBIENT_TEMP KGATEWAY_TEMP CA_CERT_TEMP ISTIO_SYSTEM_NS_TEMP
 export EW_GATEWAY_TEMP
@@ -62,15 +71,19 @@ CALICO_ADDY_POOL="${K3D_DIR}/calico.address-pool.template.yaml"
 MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 
 # k8s cluster versions
-export CALICO_VER K3S_VER MLB_VER K3D_TEMPLATE
-CALICO_VER="3.30.3"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
-                                           # https://raw.githubusercontent.com/projectcalico/calico/v3.30.0/manifests/calico.yaml
-#K3S_VER="v1.32.8-k3s1"                    # https://hub.docker.com/r/rancher/k3s/tags
-K3S_VER="v1.33.6-k3s1"                     # https://hub.docker.com/r/rancher/k3s/tags
+export CALICO_VER MLB_VER K3D_TEMPLATE K3S_VER_132 K3S_VER_133
+export K3S_VER K3S_VER_132 K3S_VER_133 K3S_VER_134 K3S_VER_135
+CALICO_VER="3.30.5"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
+                                           # https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
+K3S_VER_132="v1.32.11-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
+K3S_VER_133="v1.33.7-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
+K3S_VER_134="v1.34.3-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
+K3S_VER_135="v1.35.0-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35
 #MLB_VER="v0.14.9"                          # https://github.com/metallb/metallb/tags
-MLB_VER="v0.15.2"                          # https://github.com/metallb/metallb/tags
+MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
+K3S_VER=$K3S_VER_134
 
 # HELM and ISTIO versions
 export KGATEWAY_VER ISTIO_VER ISTIO_REPO HELM_CHART K8S_TRUST_DOMAIN
@@ -81,7 +94,7 @@ HELM_REPO=us-docker.pkg.dev/soloio-img/istio-helm
 ISTIO_REPO=us-docker.pkg.dev/soloio-img/istio
 K8S_TRUST_DOMAIN='k8s.cluster.local'
 
-# Docker Compose for PiHole and Docker Registry Proxy
+# Docker Compose on DOCKER_NETWORK allows PiHole and Docker Registry Proxy (ligfx)
 export KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
 export PIHOLE_IP=10.10.96.2
 export REGISTRY_IP=10.10.96.3
@@ -111,75 +124,53 @@ function _create_docker_compose {
            -D dir="$SCRIPT_DIR"                                                \
            "$K3D_DIR"/docker-compose.yaml.j2                                   \
     > "$KCM_DOCKER_COMPOSE"
-    echo 'INFO[S002]: '"KCM: $KCM_DOCKER_COMPOSE created"
+    echo "INFO[S002]: KCM: $KCM_DOCKER_COMPOSE created"
   else
-    echo 'INFO[S002]: '"KCM: $KCM_DOCKER_COMPOSE already exists"
+    echo "INFO[S003]: KCM: $KCM_DOCKER_COMPOSE already exists"
   fi
 }
 
 # k3d-registry-dockerd, a docker proxy that elimiates anonymous docker login errors in k8s
 # Docker Desktop must be running (TBD does this work with Rancher Desktop?)
 # https://github.com/ligfx/k3d-registry-dockerd
-function dockerproxy {
-  local mode=$1
-
-  _create_docker_compose
-
-  if [[ $mode == start ]]; then
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" up registry -d
-
-  elif [[ $mode == stop ]]; then
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" down registry
-
-  elif [[ $mode == status ]]; then
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" ps registry                 |\
-      grep -q healthy
-
-  fi
-  return $?
+function _external_registry {
+  _external_docker_compose registry "$1"
 }
 
-function dockerdns {
-  local _mode=$1
-  _create_docker_compose
+# PiHole local DNS server
+function _external_pihole {
+  _external_docker_compose pihole "$1"
+}
+
+# Helloworld container external to the cluster but on DOCKER_NETWORK
+function _external_helloworld {
+  _external_docker_compose helloworld "$1"
+}
+
+# Generic wrapper for all external docker_compose services
+function _external_docker_compose {
+  local _service=$1
+  local _mode=${2:-start}
 
   if [[ $_mode == start ]]; then
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" up pihole -d
+    if ! _external_docker_compose "$_service" status; then
+#      echo start
+      docker compose -f "$KCM_DOCKER_COMPOSE"                                  \
+                   --project-directory "$K3D_DIR" up "$_service" -d
+    fi
   elif [[ $_mode == stop ]]; then
-    echo 
+#    echo stop
     docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" down pihole
+                   --project-directory "$K3D_DIR" down "$_service"
   elif [[ $_mode == status ]]; then
+#    echo status
     docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" ps pihole                   |\
+                   --project-directory "$K3D_DIR" ps "$_service"              |\
       grep -q healthy
   fi
-  return $?
 }
 
-function remotehelloworld {
-  local _mode=$1
-  _create_docker_compose
-
-  if [[ $_mode == start ]]; then
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" up helloworld -d
-  elif [[ $_mode == stop ]]; then
-    echo 
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" down helloworld
-  elif [[ $_mode == status ]]; then
-    docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
-                   --project-directory "$K3D_DIR" ps helloworld               |\
-      grep -q healthy
-  fi
-  return $?
-}
-
+# DOCKER_NETWORK
 function docker-k3d-network {
   local mode network subnet
   mode=$1
@@ -190,7 +181,9 @@ function docker-k3d-network {
     docker network create "$network"                                           \
       --subnet "$subnet"                                                       \
       --gateway "$NETWORK_GATEWAY"                                             \
-    > /dev/null 2>&1
+      --ip-range "$CONTAINER_SUBNET"
+
+#    > /dev/null 2>&1
 
   # Note: https://github.com/chipmk/docker-mac-net-connect/issues/48
   #    --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"     \
@@ -221,13 +214,13 @@ function k3d-cluster-create  {
     docker-k3d-network start "$DOCKER_NETWORK" "$NETWORK_SUBNET"
   fi
 
-  if ! dockerproxy status; then
-    dockerproxy start
-  fi
+  # Create the docker compose file on the DOCKER_NETWORK if it doesn't exist
+  _create_docker_compose
 
-  if ! dockerdns status; then
-    dockerdns start
-  fi
+  # Start the external services on the DOCKER_NETWORK
+  _external_registry start
+  _external_pihole start
+  _external_helloworld start
 
 ###  cat "$config"
 ###  return
@@ -597,31 +590,35 @@ alias m0down="k3d-cluster -m delete -c \$MGMT"
 
 # CLUSTER clusters. Ambient enabled with 'a' otherwise, vanilla
 # _np is without dockerproxy
-alias c1up=    "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2"
-alias c1up3a=  "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -s 3 -i"
-alias c1up3=   "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -s 3"
-alias c1up_np= "k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -y"
-alias c1down=  "k3d-cluster -m delete -c \$CLUSTER1"
+alias c1up="k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2"
+alias c1up3a="k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -s 3 -i"
+alias c1up3="k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -s 3"
+alias c1up_np="k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2 -y"
+alias c1down="k3d-cluster -m delete -c \$CLUSTER1"
 alias c1u=c1up
+alias c1d=c1down
 
-alias c2up=    "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2"
-alias c2upa=   "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -i"
-alias c2up3=   "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -s 3"
-alias c2up_np= "k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -y"
-alias c2down=  "k3d-cluster -m delete -c \$CLUSTER2"
+alias c2up="k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2"
+alias c2upa="k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -i"
+alias c2up3="k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -s 3"
+alias c2up_np="k3d-cluster -m create -c \$CLUSTER2 -r \$MLB_CIDR2 -p \$CLUSTER_CIDR2 -q \$SERVICE_CIDR2 -e us-east-2 -y"
+alias c2down="k3d-cluster -m delete -c \$CLUSTER2"
 alias c2u=c2up
+alias c2d=c2down
 
-alias c3up=    "k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1"
-alias c3upa=   "k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1 -i"
-alias c3up_np= "k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1 -y"
-alias c3down=  "k3d-cluster -m delete -c \$CLUSTER3"
+alias c3up="k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1"
+alias c3upa="k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1 -i"
+alias c3up_np="k3d-cluster -m create -c \$CLUSTER3 -r \$MLB_CIDR3 -p \$CLUSTER_CIDR3 -q \$SERVICE_CIDR3 -e us-west-1 -y"
+alias c3down="k3d-cluster -m delete -c \$CLUSTER3"
 alias c3u=c3up
+alias c3d=c3down
 
-alias c4up=    "k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1"
-alias c4upa=   "k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1 -i"
-alias c4up_np= "k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1 -y"
-alias c4down=  "k3d-cluster -m delete -c \$CLUSTER4"
+alias c4up="k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1"
+alias c4upa="k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1 -i"
+alias c4up_np="k3d-cluster -m create -c \$CLUSTER4 -r \$MLB_CIDR4 -p \$CLUSTER_CIDR4 -q \$SERVICE_CIDR4 -e us-east-1 -y"
+alias c4down="k3d-cluster -m delete -c \$CLUSTER4"
 alias c4u=c4up
+alias c4d=c4down
 
 # ArgoCD
 alias a0up=    "k3d-cluster -m create -c \$ARGOCD -r \$MLB_CIDR5 -p \$CLUSTER_CIDR5 -q \$SERVICE_CIDR5 -e us-west-2 -a"

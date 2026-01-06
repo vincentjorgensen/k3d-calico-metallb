@@ -124,9 +124,9 @@ function _create_docker_compose {
            -D dir="$SCRIPT_DIR"                                                \
            "$K3D_DIR"/docker-compose.yaml.j2                                   \
     > "$KCM_DOCKER_COMPOSE"
-    echo "INFO[S002]: KCM: $KCM_DOCKER_COMPOSE created"
+    echo "INFO[S002] KCM: $KCM_DOCKER_COMPOSE created"
   else
-    echo "INFO[S003]: KCM: $KCM_DOCKER_COMPOSE already exists"
+    echo "INFO[S003] KCM: $KCM_DOCKER_COMPOSE already exists"
   fi
 }
 

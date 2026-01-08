@@ -22,9 +22,6 @@ export SERVICE_CIDR1 SERVICE_CIDR2 SERVICE_CIDR3 SERVICE_CIDR4
 export SERVICE_CIDR5 SERVICE_CIDR6 SERVICE_CIDR7 SERVICE_CIDR8
 
 DOCKER_NETWORK=k3d-cluster-network
-#NETWORK_SUBNET=192.168.96.0/24
-#NETWORK_GATEWAY=192.168.96.1
-#CONTAINER_SUBNET=192.168.96.192/26 # For containers on the docker network
 NETWORK_SUBNET=10.10.0.0/16
 NETWORK_GATEWAY=10.10.0.1
 CONTAINER_SUBNET=10.10.97.0/24 # For containers on the docker network
@@ -57,6 +54,15 @@ CLUSTER_CIDR7=10.54.0.0/16
 SERVICE_CIDR7=10.55.0.0/16
 CLUSTER_CIDR8=10.56.0.0/16
 SERVICE_CIDR8=10.57.0.0/16
+
+# Docker Compose on DOCKER_NETWORK allows PiHole and Docker Registry Proxy (ligfx)
+export KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
+export PIHOLE_IP=10.10.96.10
+export REGISTRY_IP=10.10.96.11
+export HELLOWORLD_IP0=10.10.96.17
+export HELLOWORLD_IP1=10.10.96.18
+export HELLOWORLD_IP2=10.10.96.19
+export LIGFX_VER=v0.10
 
 # K3D names and places
 # Calico is required in lieu of Traefik for Istio Ambient
@@ -94,14 +100,6 @@ HELM_REPO=us-docker.pkg.dev/soloio-img/istio-helm
 ISTIO_REPO=us-docker.pkg.dev/soloio-img/istio
 K8S_TRUST_DOMAIN='k8s.cluster.local'
 
-# Docker Compose on DOCKER_NETWORK allows PiHole and Docker Registry Proxy (ligfx)
-export KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
-export PIHOLE_IP=10.10.96.2
-export REGISTRY_IP=10.10.96.3
-export HELLOWORLD_IP0=10.10.96.17
-export HELLOWORLD_IP1=10.10.96.18
-export HELLOWORLD_IP2=10.10.96.19
-export LIGFX_VER=v0.10
 
 # shellcheck disable=SC2120
 function _create_docker_compose {
@@ -150,20 +148,17 @@ function _external_helloworld {
 # Generic wrapper for all external docker_compose services
 function _external_docker_compose {
   local _service=$1
-  local _mode=${2:-start}
+  local _mode=${2:-status}
 
   if [[ $_mode == start ]]; then
     if ! _external_docker_compose "$_service" status; then
-#      echo start
       docker compose -f "$KCM_DOCKER_COMPOSE"                                  \
                    --project-directory "$K3D_DIR" up "$_service" -d
     fi
   elif [[ $_mode == stop ]]; then
-#    echo stop
     docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" down "$_service"
   elif [[ $_mode == status ]]; then
-#    echo status
     docker compose -f "$KCM_DOCKER_COMPOSE"                                    \
                    --project-directory "$K3D_DIR" ps "$_service"              |\
       grep -q healthy
@@ -172,16 +167,15 @@ function _external_docker_compose {
 
 # DOCKER_NETWORK
 function docker-k3d-network {
-  local mode network subnet
-  mode=$1
-  network=$2
-  subnet=$3
+  local mode=${1:-status}
 
   if [[ $mode == start ]]; then
-    docker network create "$network"                                           \
-      --subnet "$subnet"                                                       \
-      --gateway "$NETWORK_GATEWAY"                                             \
-      --ip-range "$CONTAINER_SUBNET"
+    if ! docker-k3d-network status; then
+      docker network create "$DOCKER_NETWORK"                                  \
+        --subnet "$NETWORK_SUBNET"                                             \
+        --gateway "$NETWORK_GATEWAY"                                           \
+        --ip-range "$CONTAINER_SUBNET"
+    fi
 
 #    > /dev/null 2>&1
 
@@ -189,11 +183,11 @@ function docker-k3d-network {
   #    --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"     \
 
   elif [[ $mode == stop ]]; then
-    docker network rm "$network" > /dev/null 2>&1
+    docker network rm "$DOCKER_NETWORK" > /dev/null 2>&1
 
   elif [[ $mode == status ]]; then
-    docker network ls -f name="$network" |
-      grep -E '\<'"$network"'\>' > /dev/null 2>&1
+    docker network ls -f name="$DOCKER_NETWORK" |
+      grep -E '\<'"$DOCKER_NETWORK"'\>' > /dev/null 2>&1
   fi
   return $?
 }
@@ -210,9 +204,7 @@ function k3d-cluster-create  {
     return
   fi
   # create docker network if it does not exist
-  if ! docker-k3d-network status "$DOCKER_NETWORK"; then
-    docker-k3d-network start "$DOCKER_NETWORK" "$NETWORK_SUBNET"
-  fi
+  docker-k3d-network start
 
   # Create the docker compose file on the DOCKER_NETWORK if it doesn't exist
   _create_docker_compose

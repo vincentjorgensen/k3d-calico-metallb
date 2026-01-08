@@ -18,6 +18,8 @@ implemenation; no port-forwarding required.
    * [k3d-registry-dockerd](#k3d-registry-dockerd)
    * [Pi-hole DNS](#pihole-dns)
 - [Technical Notes](#technical-notes)
+   * [Docker Network Subnet](#docker-network-subnet")
+   * [Docker Network nat-unprotected (obsolete)](#docker-network-nat-unprotected")
 
 <!-- TOC end -->
 
@@ -188,6 +190,8 @@ of this.
 <!-- TOC --><a name="technical-notes"></a>
 ## Technical Notes
 
+<!-- TOC --><a name="docker-network-subnet"></a>
+### Docker Network Subnet
 It is important to start the docker network with the a subnet cidr that
 includes the metallb subnets. I got bit by this. For example, the snippet
 below (similar to what is used in [functions.sh](./functions.sh#L87) creates
@@ -195,12 +199,24 @@ docker network resource.
 
 ```bash
 # Create a docker network on a defined subnet
-docker network create --subnet 192.168.96.0/24 k3d-cluster-network
+docker network create k3d-cluster-network                                      \
+  --subnet 10.10.0.0/16                                                        \
+  --gateway 10.10.0.1                                                          \
+  --ip-range 10.10.97.0/24                                                     \
 ```
 
+The IP range specifies what containers on the network should use. So nodes of
+your k8s clusters or anything in a docker-compose file that doesn't explicitly
+set its external IPv4 will be in this range.
+
 Then, the [k3d cluster
-template](./templates/k3d-omni-cluster.template.yaml#L24), we specify this
-network: `network: k3d-cluster-network`.
+template](./templates/k3d-omni-cluster.template.yaml#L7), we specify:
+
+```yaml
+network: ${DOCKER_NETWORK}
+```
+
+Where `DOCKER_NETWORK` is defined in [functions.sh](./functions.sh#L24).
 
 Finally, in the [metallb address
 pool](./templates/metallb-native.address-pool.template.yaml#L9), we chose an ip
@@ -212,15 +228,20 @@ spec:
   - ${MLB_ADDY_RANGE}
 ```
 
-The ranges in the docker network can be found [here](./templates/k3d-omni-cluster.template.yaml#L30-L37)
+The ranges in the docker network can be found [here](./functions.sh#L30-L37)
+
+<!-- TOC --><a name="docker-network-nat-unprotected"></a>
+### Docker Network nat-unprotected (obsolete)
 
 For Docker Desktop greater than `v4.39.0` the network used to need an extra
 option:
 
 ```bash
-docker network create "$network"                                              \
-      --subnet "$subnet"                                                      \
-      --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"
+docker network create k3d-cluster-network                                      \
+  --subnet 10.10.0.0/16                                                        \
+  --gateway 10.10.0.1                                                          \
+  --ip-range 10.10.97.0/24                                                     \
+  --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"
 ```
 
 However, the issue has since been resolved.  [See

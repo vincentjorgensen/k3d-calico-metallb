@@ -18,8 +18,8 @@ implemenation; no port-forwarding required.
    * [k3d-registry-dockerd](#k3d-registry-dockerd)
    * [Pi-hole DNS](#pihole-dns)
 - [Technical Notes](#technical-notes)
-   * [Docker Network Subnet](#docker-network-subnet")
-   * [Docker Network nat-unprotected (obsolete)](#docker-network-nat-unprotected")
+   * [Docker Network Subnet](#docker-network-subnet)
+   * [Docker Network nat-unprotected (obsolete)](#docker-network-nat-unprotected)
 
 <!-- TOC end -->
 

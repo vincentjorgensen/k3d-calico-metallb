@@ -1,56 +1,87 @@
 # k3d-calico-metallb
 
-K3d cluster with local load-balancing and pre-installed with Istio Ambient.
+K3D clusters on MacOS with Docker Desktop for local testing and development.
+
+Calico replaces the default K3D Traefik in order that I can test Istio Ambient.
+
+MetalLB works so long as Docker Mac Net Connect is installed. That is, one can
+reference the external IP of cluster services via MetalLB's load-balander
+implemenation; no port-forwarding required.
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
-- [MacOS](#macos)
-- [Simple Test](#simple-test)
+- [Installation](#macos)
+   * [MacOS](#macos)
+- [Usage](#uage)
+   * [Simple Test](#simple-test)
 - [Usage notes](#usage-notes)
    * [k3d-registry-dockerd](#k3d-registry-dockerd)
+   * [Pi-hole DNS](#pihole-dns)
 - [Technical Notes](#technical-notes)
 
 <!-- TOC end -->
 
+<!-- TOC --><a name="installation"></a>
+# Installation
+
+Currently, I have only developed k3d-calico-metallb (KCM) for MacOS.
+
 <!-- TOC --><a name="macos"></a>
 ## MacOS
 
-Make sure Docker Desktop is running (TBD test ambient on Rancher Desktop.
-Non-istio has already been proven to work.)
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
-Install or update k3d:
-```sh
-curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-```
+    It also works nominally with [Rancher
+    Desktop](https://docs.rancherdesktop.io/getting-started/installation/), but
+    I've noticed that it far less performant with Rancher. For example, with
+    Docker, I can run four, sometimes more, small clusters. With Rancher, even with
+    small clusters, I am unable to deploy more than two.
 
-Install `jinja2` for templating:
+1. Install [K3D](https://k3d.io/stable/#releases).
+
+    ```bash
+    curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+    ```
+
+1. Install `jinja2`, which is needed for templates.
+
+    ```bash
+    brew install jinja2
+    ```
+
+1. Install [Docker Mac Net Connect](https://github.com/chipmk/docker-mac-net-connect).
+
+    ```bash
+    brew install chipmk/tap/docker-mac-net-connect
+    sudo brew services start chipmk/tap/docker-mac-net-connect
+    ```
+
+<!-- TOC --><a name="usage"></a>
+# Usage
+
+First, source `functions.sh` in the top-level of the repo.
+
 ```bash
-brew install jinja2
-```
-
-Install [Docker Mac Net Connect](https://github.com/chipmk/docker-mac-net-connect)
-```sh
-brew install chipmk/tap/docker-mac-net-connect
-sudo brew services start chipmk/tap/docker-mac-net-connect
-```
-
-Source `functions.sh`
-```sh
 source ./functions.sh
 ```
 
-Bring up a three-cluster setup with:
-```sh
+Now, in order to create K3D clusters, I've created several convient aliases,
+all available for perusal toward the bottom of `functions.sh`.
+
+For example, to start up a management cluster and two workload clusters, all
+sized at one node, do:
+
+```bash
 m0up
 c1up
 c2up
 ```
 
-The three clusters' contexts are `mgmt`, `cluster1`, and `cluster2`. Clusters 1
-and 2 are istio enabled. The management cluster is not. 
+The three clusters' contexts are `mgmt`, `cluster1`, and `cluster2`.
 
-Destroy the clusters with: 
-```sh
+Finally, Destroy the clusters with: 
+
+```bash
 m0down
 c1down
 c2down
@@ -137,6 +168,23 @@ time (c1up; sleep 1; while kubectl --context cluster1 -n istio-system get pods |
 
 The last number is the total time that passed in the universe, so 34 seconds.
 
+<!-- TOC --><a name="pihole-dns"></a>
+### Pi-hole
+
+KCM also deploys [Pi-hole](https://github.com/pi-hole/docker-pi-hole/) on the
+Docker network. If external-dns is deployed correctly on your clusters, you can
+use programmable DNS outside your cluster to test URLs that would otherwise
+require burdensome curl-hacking, like some SSL setups.
+
+For example, I frequently use `helloworld.example.com` to test whether I've
+configured my gateway correctly. Being able to test it from outside the
+cluster, with a FQDN, in conjunction with MetalLB, makes my local mock-up feel
+more like an actual cloud deploy.
+
+The compansion projection,
+[GSI](https://github.com/vincentjorgensen/gloo-solo-istio/), makes frequent use
+of this.
+
 <!-- TOC --><a name="technical-notes"></a>
 ## Technical Notes
 
@@ -151,7 +199,7 @@ docker network create --subnet 192.168.96.0/24 k3d-cluster-network
 ```
 
 Then, the [k3d cluster
-template](./templates/k3d-omni-cluster.template.yaml#L7), we specify this
+template](./templates/k3d-omni-cluster.template.yaml#L24), we specify this
 network: `network: k3d-cluster-network`.
 
 Finally, in the [metallb address
@@ -161,14 +209,21 @@ range in this cidr.
 ```yaml
 spec:
   addresses:
-  - 192.168.96.20-192.168.96.29
+  - ${MLB_ADDY_RANGE}
 ```
 
-For Docker Desktop greater than `v4.39.0` the network needs an extra option:
+The ranges in the docker network can be found [here](./templates/k3d-omni-cluster.template.yaml#L30-L37)
+
+For Docker Desktop greater than `v4.39.0` the network used to need an extra
+option:
+
 ```bash
 docker network create "$network"                                              \
       --subnet "$subnet"                                                      \
       --opt "com.docker.network.bridge.gateway_mode_ipv4=nat-unprotected"
 ```
 
-[See this](https://github.com/chipmk/docker-mac-net-connect/issues/48) for details.
+However, the issue has since been resolved.  [See
+this](https://github.com/chipmk/docker-mac-net-connect/issues/48) for details.
+I am leaving this here for historical purposes, and because it's like that
+this--or something similar--will happen again.

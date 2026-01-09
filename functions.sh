@@ -22,19 +22,19 @@ export SERVICE_CIDR1 SERVICE_CIDR2 SERVICE_CIDR3 SERVICE_CIDR4
 export SERVICE_CIDR5 SERVICE_CIDR6 SERVICE_CIDR7 SERVICE_CIDR8
 
 DOCKER_NETWORK=k3d-cluster-network
-NETWORK_SUBNET=10.10.0.0/16
-NETWORK_GATEWAY=10.10.0.1
-CONTAINER_SUBNET=10.10.97.0/24 # For containers on the docker network
+NETWORK_SUBNET=172.172.172.0/24
+NETWORK_GATEWAY=172.172.172.1
+CONTAINER_SUBNET=172.172.172.0/26 # For containers on the docker network, 62 possible hosts
 
 # MLB (external LB) cidrs 14 possible LBs
-MLB_CIDR1=10.10.96.16/28  # HostMin: 10.10.96.17
-MLB_CIDR2=10.10.96.32/28
-MLB_CIDR3=10.10.96.48/28
-MLB_CIDR4=10.10.96.64/28
-MLB_CIDR5=10.10.96.80/28
-MLB_CIDR6=10.10.96.96/28
-MLB_CIDR7=10.10.96.112/28 # HostMin: 10.10.96.113
-MLB_CIDR8=10.10.96.128/28
+MLB_CIDR1=172.172.172.80/28  # Range: 81-94
+MLB_CIDR2=172.172.172.96/28  # Range: 96-110
+MLB_CIDR3=172.172.172.112/28 # Range: 113-126
+MLB_CIDR4=172.172.172.128/28 # Range: 129-142
+MLB_CIDR5=172.172.172.144/28 # Range: 145-158
+MLB_CIDR7=172.172.172.160/28 # Range: 161-173
+MLB_CIDR8=172.172.172.175/28 # Range: 176-90
+MLB_CIDR8=172.172.172.182/28 # Range: 176-190
 
 
 # Cluster (Pod) and Service CIDRs 65534 possible addresses per slice
@@ -56,21 +56,25 @@ CLUSTER_CIDR8=10.56.0.0/16
 SERVICE_CIDR8=10.57.0.0/16
 
 # Docker Compose on DOCKER_NETWORK allows PiHole and Docker Registry Proxy (ligfx)
-export KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
-export PIHOLE_IP=10.10.96.10
-export REGISTRY_IP=10.10.96.11
-export HELLOWORLD_IP0=10.10.96.17
-export HELLOWORLD_IP1=10.10.96.18
-export HELLOWORLD_IP2=10.10.96.19
-export LIGFX_VER=v0.10
+# In 172.172.172.64/28 # Range: 64-78 (14)
+export PIHOLE_IP REGISTRY_IP HELLOWORLD_IP0 HELLOWORLD_IP1 HELLOWORLD_IP2 LIGFX_VER
+
+PIHOLE_IP=172.172.172.69
+REGISTRY_IP=172.172.172.72
+HELLOWORLD_IP0=172.172.172.64
+HELLOWORLD_IP1=172.172.172.65
+HELLOWORLD_IP2=172.172.172.66
+LIGFX_VER=v0.10
 
 # K3D names and places
 # Calico is required in lieu of Traefik for Istio Ambient
 # MetalLb with docker-mac-net-connect allows directly addressable external IPs
 # metallb: https://github.com/metallb/metallb
 # docker-mac-net-connect: https://github.com/chipmk/docker-mac-net-connect
-export K3D_DIR MLB_ADDY_POOL MLB_ADDY_RANGE CALICO_ADDY_RANGE CALICO_ADDY_POOL MLB_TEMP
+export K3D_DIR MLB_ADDY_POOL MLB_ADDY_RANGE CALICO_ADDY_RANGE CALICO_ADDY_POOL
+export MLB_TEMP KCM_DOCKER_COMPOSE
 K3D_DIR=$SCRIPT_DIR/templates
+KCM_DOCKER_COMPOSE="$K3D_DIR"/docker-compose.yaml
 CALICO_ADDY_POOL="${K3D_DIR}/calico.address-pool.template.yaml"
 MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 
@@ -378,6 +382,8 @@ alias d1down="k3d-cluster -m delete -c \$DEMO1"
 # MGMT cluster
 alias m0up="k3d-cluster -m create -c \$MGMT -r \$MLB_CIDR6 -p \$CLUSTER_CIDR6 -q \$SERVICE_CIDR6 -e us-west-2"
 alias m0down="k3d-cluster -m delete -c \$MGMT"
+alias m0u=m0up
+alias m0d=m0down
 
 # CLUSTER clusters. Ambient enabled with 'a' otherwise, vanilla
 # _np is without dockerproxy

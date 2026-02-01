@@ -81,7 +81,8 @@ MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 # k8s cluster versions
 export CALICO_VER MLB_VER K3D_TEMPLATE K3S_VER_132 K3S_VER_133
 export K3S_VER K3S_VER_132 K3S_VER_133 K3S_VER_134 K3S_VER_135
-CALICO_VER="3.30.5"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
+CALICO_VER="3.30.6"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
+#CALICO_VER="3.30.5"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
 K3S_VER_132="v1.32.11-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
 K3S_VER_133="v1.33.7-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
@@ -253,6 +254,12 @@ function mlb-template-create {
   echo -n "$_temp"
 }
 
+function _fetch_calico_config {
+  if ! [[ -e ${K3D_DIR}/calico-${CALICO_VER}.yaml ]]; then
+    curl -qfsSL https://raw.githubusercontent.com/projectcalico/calico/v${CALICO_VER}/manifests/calico.yaml > "${K3D_DIR}/calico-${CALICO_VER}.yaml"
+  fi
+}
+
 function create-feature-map {
   local _calico _mlb _ew _ip_range _cluster_name _pihole
   local _temp _pod_ip_range
@@ -283,6 +290,7 @@ volume_list:
 EOF
   # Calico
   if $_calico; then
+    _fetch_calico_config
     cat <<EOF >> "$_temp"
   ${K3D_DIR}/calico-${CALICO_VER}.yaml: 00-calico.yaml
   $(calico-ippool-template-create "$_pod_ip_range"): 01-calico.yaml

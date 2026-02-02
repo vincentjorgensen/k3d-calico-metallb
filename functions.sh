@@ -33,8 +33,8 @@ MLB_CIDR3=172.172.172.112/28 # Range: 113-126
 MLB_CIDR4=172.172.172.128/28 # Range: 129-142
 MLB_CIDR5=172.172.172.144/28 # Range: 145-158
 MLB_CIDR7=172.172.172.160/28 # Range: 161-173
-MLB_CIDR8=172.172.172.175/28 # Range: 176-90
-MLB_CIDR8=172.172.172.182/28 # Range: 176-190
+MLB_CIDR8=172.172.172.175/28 # Range: 176-180
+MLB_CIDR8=172.172.172.182/28 # Range: 182-192
 
 
 # Cluster (Pod) and Service CIDRs 65534 possible addresses per slice
@@ -260,6 +260,13 @@ function _fetch_calico_config {
   fi
 }
 
+function _fetch_metallb_config {
+	if ! [[ -e ${K3D_DIR}/metallb-native-${MLB_VER}.yaml ]]; then
+		curl -qfsSL https://raw.githubusercontent.com/metallb/metallb/${MLB_VER}/config/manifests/metallb-native.yaml > "${K3D_DIR}/metallb-native-${MLB_VER}.yaml"
+	fi
+}
+
+
 function create-feature-map {
   local _calico _mlb _ew _ip_range _cluster_name _pihole
   local _temp _pod_ip_range
@@ -304,6 +311,7 @@ EOF
   fi
   # Metal LB
   if $_mlb; then
+    _fetch_metallb_config
     cat <<EOF >> "$_temp"
   ${K3D_DIR}/metallb-native-${MLB_VER}.yaml: 10-metallb-native.yaml
   $(mlb-template-create "$_ip_range"): 11-metallb-native.address-pool.yaml
@@ -431,5 +439,6 @@ function c2j { c2down;c2up; }
 function c3j { c3down;c3up; }
 function c4j { c4down;c4up; }
 function m0j { m0down;m0up; }
+function d0j { d0down;d0up; }
 
 # End

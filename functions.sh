@@ -86,7 +86,7 @@ CALICO_VER="3.30.6"                        # https://github.com/projectcalico/ca
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
 K3S_VER_132="v1.32.12-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
 K3S_VER_133="v1.33.8-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
-K3S_VER_134="v1.34.3-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
+K3S_VER_134="v1.34.4-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
 K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 

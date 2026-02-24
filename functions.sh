@@ -86,7 +86,7 @@ CALICO_VER="3.30.6"                        # https://github.com/projectcalico/ca
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
 K3S_VER_132="v1.32.12-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
 K3S_VER_133="v1.33.8-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
-K3S_VER_134="v1.34.4-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
+K3S_VER_134="v1.34.3-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
 K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
@@ -217,6 +217,26 @@ function k3d-cluster-create  {
   kubectl config delete-context "${name}" > /dev/null 2>&1 || true
 
   kubectl config rename-context "k3d-${name}" "${name}"
+
+  _kubeconfig_adjust_server_address "$name"
+}
+
+function _kubeconfig_adjust_server_address {
+  local _server_address _server_ip _server_port _temp_kubeconfig
+
+  if ! pgrep 'Rancher Desktop' > /dev/null 2>&1; then
+    return
+  fi
+  _server_address=$(yq '.clusters[] | select (.name == "k3d-'"$1"'") | .cluster.server' ~/.kube/config)
+  _server_ip=$(echo "$_server_address" | sed -e 's;https://\(.*\);\1;'|awk -F: '{print $1}')
+  _server_port=$(echo "$_server_address" | sed -e 's;https://\(.*\);\1;'|awk -F: '{print $2}')
+
+  _temp_kubeconfig=$(mktemp)
+
+  if [[ $_server_address =~ 0.0.0.0 ]]; then
+    sed -e 's;\(.*server:\) 'https://"$_server_ip"':'"$_server_port"';\1 https://127.0.0.1:'"$_server_port"';' ~/.kube/config > "$_temp_kubeconfig"
+    cp "$_temp_kubeconfig" ~/.kube/config
+  fi
 }
 
 # delete k3d cluster "k3d-cluster-delete <name>"

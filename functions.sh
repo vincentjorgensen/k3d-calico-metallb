@@ -224,7 +224,8 @@ function k3d-cluster-create  {
 function _kubeconfig_adjust_server_address {
   local _server_address _server_ip _server_port _temp_kubeconfig
 
-  if ! pgrep 'Rancher Desktop' > /dev/null 2>&1; then
+  # Only needed on work laptop, independent of Docker or Ranche
+  if ! [[ $(hostname) =~ RIV ]]; then
     return
   fi
   _server_address=$(yq '.clusters[] | select (.name == "k3d-'"$1"'") | .cluster.server' ~/.kube/config)

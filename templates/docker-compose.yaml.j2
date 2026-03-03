@@ -33,8 +33,8 @@ services:
       default:
         ipv4_address: {{ registry_ip }}
     ports:
-    - name: registry
-      target: {{ k3s_registry_port_internal }}
+    - target: {{ k3s_registry_port_internal }}
+      name: registry
       published: "{{ k3s_registry_port_external }}"
       host_ip: 0.0.0.0
       protocol: tcp

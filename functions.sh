@@ -81,8 +81,8 @@ MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 # k8s cluster versions
 export CALICO_VER MLB_VER K3D_TEMPLATE K3S_VER_132 K3S_VER_133
 export K3S_VER K3S_VER_132 K3S_VER_133 K3S_VER_134 K3S_VER_135
-CALICO_VER="3.30.6"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
-#CALICO_VER="3.30.5"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
+CALICO_VER="3.31.4"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
+#CALICO_VER="3.30.6"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
 K3S_VER_132="v1.32.12-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
 K3S_VER_133="v1.33.8-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
@@ -91,7 +91,7 @@ K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
-K3S_VER=$K3S_VER_134
+K3S_VER=$K3S_VER_135
 
 # shellcheck disable=SC2120
 function _create_docker_compose {
@@ -166,7 +166,13 @@ function docker-k3d-network {
       docker network create "$DOCKER_NETWORK"                                  \
         --subnet "$NETWORK_SUBNET"                                             \
         --gateway "$NETWORK_GATEWAY"                                           \
-        --ip-range "$CONTAINER_SUBNET"
+        --ip-range "$CONTAINER_SUBNET" > /dev/null 2>&1
+      if [[ $? -lt 1 ]]; then
+        echo "INFO[S004] KCM: docker network $DOCKER_NETWORK created on subnet $NETWORK_SUBNET"
+      else
+        echo "ERROR[S004] KCM: unable to create docker network $DOCKER_NETWORK"
+        echo "ERROR[S004] KCM: command was: docker network create $DOCKER_NETWORK --subnet $NETWORK_SUBNET --gateway $NETWORK_GATEWAY --ip-range $CONTAINER_SUBNET"
+      fi
     fi
 
 #    > /dev/null 2>&1

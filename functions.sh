@@ -64,6 +64,7 @@ REGISTRY_IP=172.172.172.72
 HELLOWORLD_IP0=172.172.172.64
 HELLOWORLD_IP1=172.172.172.65
 HELLOWORLD_IP2=172.172.172.66
+# https://github.com/ligfx/k3d-registry-dockerd
 LIGFX_VER=v0.10
 
 # K3D names and places
@@ -116,7 +117,7 @@ function _create_docker_compose {
     > "$KCM_DOCKER_COMPOSE"
     echo "INFO[S002] KCM: $KCM_DOCKER_COMPOSE created"
   else
-    echo "INFO[S003] KCM: $KCM_DOCKER_COMPOSE already exists"
+    echo "INFO[S012] KCM: $KCM_DOCKER_COMPOSE already exists"
   fi
 }
 
@@ -170,8 +171,8 @@ function docker-k3d-network {
       if [[ $? -lt 1 ]]; then
         echo "INFO[S004] KCM: docker network $DOCKER_NETWORK created on subnet $NETWORK_SUBNET"
       else
-        echo "ERROR[S004] KCM: unable to create docker network $DOCKER_NETWORK"
-        echo "ERROR[S004] KCM: command was: docker network create $DOCKER_NETWORK --subnet $NETWORK_SUBNET --gateway $NETWORK_GATEWAY --ip-range $CONTAINER_SUBNET"
+        echo "ERROR[S024] KCM: unable to create docker network $DOCKER_NETWORK"
+        echo "ERROR[S024] KCM: command was: docker network create $DOCKER_NETWORK --subnet $NETWORK_SUBNET --gateway $NETWORK_GATEWAY --ip-range $CONTAINER_SUBNET"
       fi
     fi
 
@@ -218,19 +219,21 @@ function k3d-cluster-create  {
   k3d cluster create --wait --config "${config}"
 
   # remove existing ones if they exist
-  kubectl config delete-cluster "${name}" > /dev/null 2>&1 || true
+  kubectl config delete-cluster "$name" > /dev/null 2>&1 || true
   kubectl config delete-user    "admin@${name}" > /dev/null 2>&1 || true
-  kubectl config delete-context "${name}" > /dev/null 2>&1 || true
+  kubectl config delete-context "$name" > /dev/null 2>&1 || true
 
-  kubectl config rename-context "k3d-${name}" "${name}"
+  kubectl config rename-context "k3d-${name}" "$name"
 
   _kubeconfig_adjust_server_address "$name"
+
+  _wait_for_pods "$name" metallb-system metallb
 }
 
 function _kubeconfig_adjust_server_address {
   local _server_address _server_ip _server_port _temp_kubeconfig
 
-  # Only needed on work laptop, independent of Docker or Ranche
+  # Only needed on work laptop, independent of Docker or Rancher
   if ! [[ $(hostname) =~ RIV ]]; then
     return
   fi
@@ -414,6 +417,38 @@ function k3d-cluster {
     k3d cluster ls "$_cluster_name" > /dev/null 2>&1
   fi
   return $?
+}
+
+function docker-external-services {
+  local mode=${1:-status}
+
+  if [[ $mode == start ]]; then
+    docker-k3d-network start
+    _external_helloworld start
+    _external_registry start
+    _external_pihole start
+  elif [[ $mode == stop ]]; then
+    _external_helloworld stop
+    _external_registry stop
+    _external_pihole stop
+  elif [[ $mode == status ]]; then
+    _external_helloworld status &&                                             \
+    _external_registry status &&                                               \
+    _external_pihole status
+  fi
+  return $?
+}
+
+function _wait_for_pods {
+  local _context=$1
+  local _namespace=$2
+  local _app=$3
+
+  echo "INFO[S005] KCM: waiting for app=$_app to be ready"
+  kubectl wait pods                                                            \
+  --context "$_context"                                                        \
+  --namespace "$_namespace"                                                    \
+  --for=condition=Ready -l app="$_app" --timeout=60s
 }
 
 # DEMO clusters

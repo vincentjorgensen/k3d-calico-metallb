@@ -14,16 +14,17 @@ load-balancer implemenation; no port-forwarding required.
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
-- [Installation](#macos)
+- [Installation](#installation)
    * [MacOS](#macos)
-- [Usage](#uage)
+- [Usage](#usage)
    * [Simple Test](#simple-test)
-- [Usage notes](#usage-notes)
-   * [k3d-registry-dockerd](#k3d-registry-dockerd)
-   * [Pi-hole DNS](#pihole-dns)
-- [Technical Notes](#technical-notes)
-   * [Docker Network Subnet](#docker-network-subnet)
-   * [Docker Network nat-unprotected (obsolete)](#docker-network-nat-unprotected)
+   * [Usage notes](#usage-notes)
+      + [k3d-registry-dockerd](#k3d-registry-dockerd)
+         - [Disable k3d-registry-dockerd](#disable-k3d-registry-dockerd)
+      + [Pi-hole](#pi-hole)
+   * [Technical Notes](#technical-notes)
+      + [Docker Network Subnet](#docker-network-subnet)
+      + [Docker Network nat-unprotected (obsolete)](#docker-network-nat-unprotected-obsolete)
 
 <!-- TOC end -->
 
@@ -167,17 +168,18 @@ cluster in under 60 seconds. If to measure how long it takes to bring up cluster
 time (c1up; time kubectl --context cluster1 wait pods -A --for=jsonpath='{.status.phase}'=Running -l topology.kubernetes.io/region=us-west-2)
 ```
 
-For Docker Desktop, it took 79 seconds the first time. However, the next time,
-since the images are now local, it only took 34 seconds.
+For Docker Desktop v4.62.0, it took 74 seconds the first time. However, the
+next time, since the images are now local, it only took 42 seconds.
 
-For Rancher Desktop 1.22.0, it took 82 seconds the first time. However, the
+For Rancher Desktop v1.22.0, it took 82 seconds the first time. However, the
 next time, since the images are now local, it only took 44 seconds.
 
+<!-- TOC --><a name="disable-k3d-registry-dockerd"></a>
 #### Disable k3d-registry-dockerd
 
 Add the `-y` to `k3d-cluster` command.
 
-<!-- TOC --><a name="pihole-dns"></a>
+<!-- TOC --><a name="pi-hole"></a>
 ### Pi-hole
 
 KCM also deploys [Pi-hole](https://github.com/pi-hole/docker-pi-hole/) on the
@@ -237,7 +239,7 @@ spec:
 
 The ranges in the docker network can be found [here](./functions.sh#L30-L37)
 
-<!-- TOC --><a name="docker-network-nat-unprotected"></a>
+<!-- TOC --><a name="docker-network-nat-unprotected-obsolete"></a>
 ### Docker Network nat-unprotected (obsolete)
 
 For Docker Desktop greater than `v4.39.0` the network used to need an extra
@@ -255,3 +257,4 @@ However, the issue has since been resolved.  [See
 this](https://github.com/chipmk/docker-mac-net-connect/issues/48) for details.
 I am leaving this here for historical purposes, and because it's likely that
 this--or something similar--will happen again.
+

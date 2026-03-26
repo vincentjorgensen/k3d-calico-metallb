@@ -1,12 +1,16 @@
 # k3d-calico-metallb
 
-K3D clusters on MacOS with Docker Desktop for local testing and development.
+K3D clusters on MacOS with Docker Desktop (or Rancher Desktop) for local testing
+and development on MacOS.
 
-Calico replaces the default K3D Traefik in order that I can test Istio Ambient.
+[Calico](https://github.com/projectcalico/calico) replaces the default K3D
+Traefik in order that I can test Istio in Ambient mode.
 
-MetalLB works so long as Docker Mac Net Connect is installed. That is, one can
-reference the external IP of cluster services via MetalLB's load-balander
-implemenation; no port-forwarding required.
+I use [MetalLB](https://github.com/metallb/metallb) as the ingress controller.
+This works so long as works so long as [Docker Mac Net
+Connect](https://github.com/chipmk/docker-mac-net-connect) is installed. Once
+set up, I can reference the external IP of cluster services via MetalLB's
+load-balancer implemenation; no port-forwarding required.
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -26,18 +30,18 @@ implemenation; no port-forwarding required.
 <!-- TOC --><a name="installation"></a>
 # Installation
 
-Currently, I have only developed k3d-calico-metallb (KCM) for MacOS.
+I have developed k3d-calico-metallb (KCM) for MacOS.
 
 <!-- TOC --><a name="macos"></a>
 ## MacOS
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
-    It also works nominally with [Rancher
+    It also works with [Rancher
     Desktop](https://docs.rancherdesktop.io/getting-started/installation/), but
-    I've noticed that it far less performant with Rancher. For example, with
-    Docker, I can run four, sometimes more, small clusters. With Rancher, even with
-    small clusters, I am unable to deploy more than two.
+    I've noticed that it far less performant than Docker. For example, with
+    Docker, I can run four, sometimes more, small clusters. With Rancher, even
+    with small clusters, I am unable to deploy more than two.
 
 1. Install [K3D](https://k3d.io/stable/#releases).
 
@@ -67,7 +71,7 @@ First, source `functions.sh` in the top-level of the repo.
 source ./functions.sh
 ```
 
-Now, in order to create K3D clusters, I've created several convient aliases,
+In order to create K3D clusters, I've created several convient aliases,
 all available for perusal toward the bottom of `functions.sh`.
 
 For example, to start up a management cluster and two workload clusters, all
@@ -94,15 +98,15 @@ c2down
 
 Bring up a single cluster:
 ```bash
-s0up
+c1up
 ```
 
-The cluster's context is `solo`.
+The cluster's context is `cluster1`.
 
 Create a simple httpbin service of type `LoadBalancer`:
 
 ```bash
-kubectl --context solo apply -f templates/service_mockup.yaml
+kubectl --context cluster1 apply -f templates/service_mockup.yaml
 ```
 
 When it's up, this curl command should return 200, proving that it hit the  
@@ -118,7 +122,7 @@ curl -I $(kubectl get svc/httpbin                                             \
 Destroy the single cluster when you're finished:
 
 ```sh
-s0down
+c1down
 ```
 
 <!-- TOC --><a name="usage-notes"></a>
@@ -129,46 +133,49 @@ around all the important cluster creation and deletion logic. It's usage syntax
 is:
 
 ```text
-k3d cluster [create|delete] [cluster_name] <ip_range> <region> <zone> <no_of_servers> <enable_ambient>
+k3d-cluster -m [create|delte] -c [cluster_name] -r [mlb_cidr_range] -p [k8s_container_cidr] -q [k8s_service_cidr] -e [region_tag] <-s [no. of nodes]>
 ```
 
 In the samples above, I'll explain two of the convience aliases that I use:
 
 ```bash
-alias d0up3="k3d-cluster -m create -c \$DEMO -r \$IP_RANGE_100 -e us-west-1 -s 3"
-alias d0down="k3d-cluster -m delete -c \$DEMO"
-
-alias c1upa="k3d-cluster -m create -c \$CLUSTER1 -r \$IP_RANGE_30 -e us-west-2 -i"
-alias c1down="k3d-cluster delete \$CLUSTER1"
+alias c1up="k3d-cluster -m create -c \$CLUSTER1 -r \$MLB_CIDR1 -p \$CLUSTER_CIDR1 -q \$SERVICE_CIDR1 -e us-west-2"
+alias c1down="k3d-cluster -m delete -c \$CLUSTER1"
 ```
 
-For the `demo` cluster, we create a cluster in the 192.168.96.100-109 range with 3 servers and no ambient (the region is arbitrary).
+I create a cluster with 1 server node with local MetalLB IPs allocated in
+172.172.172.80/28 (14 available IPs). The container IPs are 10.42.0.0/16 and
+the service IPs are 0.43.0.0/16.
 
-For the `cluster1` cluster, we create a cluster in the 192.168.96.30-39 range with 1 server and enable ambient.
-
-For your purposes, you can change these values to what fit your needs, or add your own!
+You can change these values to what fit your needs, or add your own aliases for
+the specifics of your development.
 
 <!-- TOC --><a name="k3d-registry-dockerd"></a>
 ### k3d-registry-dockerd
 
 In order to speed up deployments and to avoid the dreaded docker.io anonymous
-pull limit inside a local k8s cluster, we implement
+pull limit inside a local k8s cluster, I implement
 [k3d-registry-dockerd](https://github.com/ligfx/k3d-registry-dockerd). This
-proxies the k3d registry through the Docker Desktop registry. If the images are
-already present, pod instantiation is significantly faster. For example, on my
-laptop, I can bring up a three-server ambient-enabled cluster in under 60
-seconds. If to measure how long it takes to bring up cluster `cluster1`, here
-is a convient snippet to measuring the start-up time:
+proxies the k3d registry through the Docker Desktop (or Rancher Desktop)
+registry. If the images are already present, pod instantiation is significantly
+faster. For example, on my laptop, I can bring up a three-server ambient-enabled
+cluster in under 60 seconds. If to measure how long it takes to bring up cluster
+`cluster1`, here is the command line I used to measure the start-up time:
 
 ```bash
-time (c1up; sleep 1; while kubectl --context cluster1 -n istio-system get pods |grep -v NAME | grep -v Running; do sleep .5; done)
+
+time (c1up; time kubectl --context cluster1 wait pods -A --for=jsonpath='{.status.phase}'=Running -l topology.kubernetes.io/region=us-west-2)
 ```
 
-```text
-0.91s user 0.51s system 4% cpu 34.475 total
-```
+For Docker Desktop, it took 79 seconds the first time. However, the next time,
+since the images are now local, it only took 34 seconds.
 
-The last number is the total time that passed in the universe, so 34 seconds.
+For Rancher Desktop 1.22.0, it took 82 seconds the first time. However, the
+next time, since the images are now local, it only took 44 seconds.
+
+#### Disable k3d-registry-dockerd
+
+Add the `-y` to `k3d-cluster` command.
 
 <!-- TOC --><a name="pihole-dns"></a>
 ### Pi-hole
@@ -183,9 +190,9 @@ configured my gateway correctly. Being able to test it from outside the
 cluster, with a FQDN, in conjunction with MetalLB, makes my local mock-up feel
 more like an actual cloud deploy.
 
-The compansion projection,
-[GSI](https://github.com/vincentjorgensen/gloo-solo-istio/), makes frequent use
-of this.
+The companion projection, [Kubernetes
+Askēma](https://github.com/vincentjorgensen/kubernetes-askema/) (K8SA), makes frequent
+use of this.
 
 <!-- TOC --><a name="technical-notes"></a>
 ## Technical Notes
@@ -194,15 +201,15 @@ of this.
 ### Docker Network Subnet
 It is important to start the docker network with the a subnet cidr that
 includes the metallb subnets. I got bit by this. For example, the snippet
-below (similar to what is used in [functions.sh](./functions.sh#L87) creates
+below (similar to what is used in [functions.sh](./functions.sh#L167) creates
 docker network resource.
 
 ```bash
 # Create a docker network on a defined subnet
-docker network create k3d-cluster-network                                      \
-  --subnet 10.10.0.0/16                                                        \
-  --gateway 10.10.0.1                                                          \
-  --ip-range 10.10.97.0/24                                                     \
+docker network create "$DOCKER_NETWORK"                                        \
+    --subnet "$NETWORK_SUBNET"                                                 \
+    --gateway "$NETWORK_GATEWAY"                                               \
+    --ip-range "$CONTAINER_SUBNET"
 ```
 
 The IP range specifies what containers on the network should use. So nodes of
@@ -246,5 +253,5 @@ docker network create k3d-cluster-network                                      \
 
 However, the issue has since been resolved.  [See
 this](https://github.com/chipmk/docker-mac-net-connect/issues/48) for details.
-I am leaving this here for historical purposes, and because it's like that
+I am leaving this here for historical purposes, and because it's likely that
 this--or something similar--will happen again.

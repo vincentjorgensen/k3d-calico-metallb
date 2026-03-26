@@ -238,12 +238,13 @@ function _kubeconfig_adjust_server_address {
     return
   fi
   _server_address=$(yq '.clusters[] | select (.name == "k3d-'"$1"'") | .cluster.server' ~/.kube/config)
-  _server_ip=$(echo "$_server_address" | sed -e 's;https://\(.*\);\1;'|awk -F: '{print $1}')
-  _server_port=$(echo "$_server_address" | sed -e 's;https://\(.*\);\1;'|awk -F: '{print $2}')
-
-  _temp_kubeconfig=$(mktemp)
 
   if [[ $_server_address =~ 0.0.0.0 ]]; then
+    _temp_kubeconfig=$(mktemp)
+    _server_ip=$(echo "$_server_address" | sed -e 's;https://\(.*\);\1;'|awk -F: '{print $1}')
+    _server_port=$(echo "$_server_address" | sed -e 's;https://\(.*\);\1;'|awk -F: '{print $2}')
+
+
     sed -e 's;\(.*server:\) 'https://"$_server_ip"':'"$_server_port"';\1 https://127.0.0.1:'"$_server_port"';' ~/.kube/config > "$_temp_kubeconfig"
     cp "$_temp_kubeconfig" ~/.kube/config
   fi

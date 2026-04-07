@@ -512,4 +512,42 @@ function c4j { c4down;c4up; }
 function m0j { m0down;m0up; }
 function d0j { d0down;d0up; }
 
+#------------------------------------------------------------------------------
+# Non KCM helper functions
+#------------------------------------------------------------------------------
+# view running docker compose helper containers
+alias dcps='docker compose --project-directory '"\$K3D_DIR"' ps'
+
+# bring up a KCM service
+function dcu {
+  docker compose --project-directory "$K3D_DIR" up "$1" -d
+}
+
+# bring down a KCM service
+function dcd {
+  docker compose --project-directory "$K3D_DIR" down "$1"
+}
+
+# Docker Mac Connect
+# https://github.com/chipmk/docker-mac-net-connect
+function start_docker_mac_connect {
+  if [[ -z $1 ]]; then 
+    sudo brew services start chipmk/tap/docker-mac-net-connect
+  else
+    sudo brew services stop chipmk/tap/docker-mac-net-connect
+  fi
+}
+
+# Rancher Desktop destroys the network between restarts (Docker Desktop retains it)
+# Creating a cluster will always perform these steps, but somethings I want to 
+# test functions prior to initializing a cluster.
+function init_kcm {
+  docker-k3d-network create
+
+  _external_registry start
+  _external_pihole start
+  _external_helloworld start
+  _external_netshoot start
+}
+
 # End

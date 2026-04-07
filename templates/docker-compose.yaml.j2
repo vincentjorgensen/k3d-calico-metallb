@@ -183,4 +183,23 @@ services:
     # Optional, if Pi-hole should get some more processing time
     - SYS_NICE
     restart: unless-stopped
+  netshoot:
+    networks:
+      default:
+        ipv4_address: {{ netshoot_ip }}
+    container_name: netshoot
+    image: nicolaka/netshoot:latest # https://github.com/nicolaka/netshoot
+    command: tail -f /dev/null
+    environment:
+      PIHOLE: {{ pihole_ip }}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 15s
+      start_interval: 5s
+      test: ["CMD", "/bin/true"]
+      timeout: 3s
+    restart: unless-stopped
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
 ...

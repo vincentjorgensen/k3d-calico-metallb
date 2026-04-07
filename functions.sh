@@ -64,6 +64,7 @@ REGISTRY_IP=172.172.172.72
 HELLOWORLD_IP0=172.172.172.64
 HELLOWORLD_IP1=172.172.172.65
 HELLOWORLD_IP2=172.172.172.66
+NETSHOOT_IP=172.171.172.80
 # https://github.com/ligfx/k3d-registry-dockerd
 LIGFX_VER=v0.10
 
@@ -88,7 +89,7 @@ CALICO_VER="3.31.4"                        # https://github.com/projectcalico/ca
 K3S_VER_132="v1.32.12-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
 K3S_VER_133="v1.33.8-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
 K3S_VER_134="v1.34.4-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
-K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35
+K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35 1.35.1 is good, testing 1.35.3 now, 1.35.2 was sloow to come up
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
@@ -107,6 +108,7 @@ function _create_docker_compose {
            -D helloworld_ip0="$HELLOWORLD_IP0"                                 \
            -D helloworld_ip1="$HELLOWORLD_IP1"                                 \
            -D helloworld_ip2="$HELLOWORLD_IP2"                                 \
+           -D netshoot_ip="$NETSHOOT_IP"                                       \
            -D ligfx_ver="$LIGFX_VER"                                           \
            -D network="$DOCKER_NETWORK"                                        \
            -D k3d_ver="$_k3d_ver"                                              \
@@ -136,6 +138,11 @@ function _external_pihole {
 # Helloworld container external to the cluster but on DOCKER_NETWORK
 function _external_helloworld {
   _external_docker_compose helloworld "$1"
+}
+
+# Helloworld container external to the cluster but on DOCKER_NETWORK
+function _external_netshoot {
+  _external_docker_compose netshoot "$1"
 }
 
 # Generic wrapper for all external docker_compose services
@@ -212,6 +219,7 @@ function k3d-cluster-create  {
   _external_registry start
   _external_pihole start
   _external_helloworld start
+  _external_netshoot start
 
 ###  cat "$config"
 ###  return

@@ -1,3 +1,5 @@
 docker-compose.yaml
 *.json
 etc-pihole/*
+calico-*.yaml
+metallb-native-*.yaml

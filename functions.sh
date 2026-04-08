@@ -357,7 +357,6 @@ EOF
 EOF
   fi
 
-###  cat "$K3D_DIR"/zone-map.yaml >> "$_temp"
   (echo zones:; for i in {a..z}; do echo - - "$i"; done) >> "$_temp"
 
   cp "$_temp" "${_temp}.yaml"

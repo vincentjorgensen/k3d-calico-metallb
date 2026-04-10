@@ -528,6 +528,10 @@ function kdcd {
   docker compose --project-directory "$K3D_DIR" down "$1"
 }
 
+function knets {
+  docker compose --project-directory "$K3D_DIR" exec -it netshoot zsh
+}
+
 # Docker Mac Connect
 # https://github.com/chipmk/docker-mac-net-connect
 function start_docker_mac_connect {

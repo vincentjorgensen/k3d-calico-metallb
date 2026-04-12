@@ -516,15 +516,15 @@ function d0j { d0down;d0up; }
 # Non KCM helper functions
 #------------------------------------------------------------------------------
 # view running docker compose helper containers
-alias dcps='docker compose --project-directory '"\$K3D_DIR"' ps'
+alias kdcps='docker compose --project-directory '"\$K3D_DIR"' ps'
 
 # bring up a KCM service
-function dcu {
+function kdcu {
   docker compose --project-directory "$K3D_DIR" up "$1" -d
 }
 
 # bring down a KCM service
-function dcd {
+function kdcd {
   docker compose --project-directory "$K3D_DIR" down "$1"
 }
 
@@ -541,7 +541,7 @@ function start_docker_mac_connect {
 # Rancher Desktop destroys the network between restarts (Docker Desktop retains it)
 # Creating a cluster will always perform these steps, but somethings I want to 
 # test functions prior to initializing a cluster.
-function init_kcm {
+function kcm_init {
   docker-k3d-network create
 
   _external_registry start

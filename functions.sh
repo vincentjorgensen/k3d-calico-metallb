@@ -93,7 +93,7 @@ K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
-K3S_VER=$K3S_VER_135
+K3S_VER=$K3S_VER_133
 
 # shellcheck disable=SC2120
 function _create_docker_compose {
@@ -546,7 +546,7 @@ function start_docker_mac_connect {
 # Creating a cluster will always perform these steps, but somethings I want to 
 # test functions prior to initializing a cluster.
 function kcm_init {
-  docker-k3d-network create
+  docker-k3d-network start
 
   _external_registry start
   _external_pihole start

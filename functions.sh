@@ -89,11 +89,13 @@ CALICO_VER="3.31.4"                        # https://github.com/projectcalico/ca
 K3S_VER_132="v1.32.12-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
 K3S_VER_133="v1.33.8-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
 K3S_VER_134="v1.34.4-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
-K3S_VER_135="v1.35.1-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35 1.35.1 is good, testing 1.35.3 now, 1.35.2 was sloow to come up
+K3S_VER_135="v1.35.6-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35 1.35.1 is good, testing 1.35.3 now, 1.35.2 was sloow to come up, testing 1.35.5
+# Everything after 1.35.1 fails to come up in Rancher Desktop. Have not tested Docker Desktop
+# 1.35.6 comes up, but slowly. Waitfor metallb fails
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
-K3S_VER=$K3S_VER_133
+K3S_VER=$K3S_VER_135
 
 # shellcheck disable=SC2120
 function _create_docker_compose {
@@ -454,6 +456,24 @@ function _wait_for_pods {
   local _app=$3
 
   echo "INFO[S005] KCM: waiting for app=$_app to be ready"
+  
+  # wait for namespace to be ready
+  local _ns_wait_cd=5
+  local _ns_ready=false
+  local _phase=blue
+  while ! $_ns_ready; do
+    _phase=$(kubectl --context "$_context" get namespaces -ojson|jq -r '.items[]| select(.metadata.name == "'"$_namespace"'")|.status.phase')
+###    echo $_ns_wait_cd "$_phase"
+    if [[ $_phase == Active ]]; then
+      _ns_ready=true
+    elif [[ $_ns_wait_cd -lt 1 ]]; then
+      _ns_ready=true
+    else
+      sleep 2
+      _ns_wait_cd=$((_ns_wait_cd-1))
+    fi
+  done
+  
   kubectl wait pods                                                            \
   --context "$_context"                                                        \
   --namespace "$_namespace"                                                    \

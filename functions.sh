@@ -462,7 +462,11 @@ function _wait_for_pods {
   local _ns_ready=false
   local _phase=blue
   while ! $_ns_ready; do
-    _phase=$(kubectl --context "$_context" get namespaces -ojson|jq -r '.items[]| select(.metadata.name == "'"$_namespace"'")|.status.phase')
+    _phase=$(kubectl get namespaces                                            \
+             --context "$_context"                                             \
+             -o json                                                           |
+      jq -r '.items[] | select(.metadata.name == "'"$_namespace"'") | .status.phase'
+    )
 ###    echo $_ns_wait_cd "$_phase"
     if [[ $_phase == Active ]]; then
       _ns_ready=true

@@ -54,7 +54,7 @@ services:
   ##############################################################################
   helloworld:
     container_name: helloworld
-    image: vincentjorgensen/rust-helloworld:0.1.3
+    image: vincentjorgensen/rust-helloworld:0.1.4
     networks:
       default:
         ipv4_address: {{ helloworld_ip0 }}
@@ -82,7 +82,7 @@ services:
     - {{ dir }}/templates/example-ssl:/ssl:ro
   helloworld2:
     container_name: helloworld2
-    image: vincentjorgensen/rust-helloworld:0.1.3
+    image: vincentjorgensen/rust-helloworld:0.1.4
     networks:
       default:
         ipv4_address: {{ helloworld_ip1 }}
@@ -110,7 +110,7 @@ services:
     - {{ dir }}/templates/example-ssl:/ssl:ro
   helloworld3:
     container_name: helloworld3
-    image: vincentjorgensen/rust-helloworld:0.1.3
+    image: vincentjorgensen/rust-helloworld:0.1.4
     networks:
       default:
         ipv4_address: {{ helloworld_ip2 }}

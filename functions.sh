@@ -81,17 +81,16 @@ CALICO_ADDY_POOL="${K3D_DIR}/calico.address-pool.template.yaml"
 MLB_ADDY_POOL="${K3D_DIR}/metallb-native.address-pool.template.yaml"
 
 # k8s cluster versions
-export CALICO_VER MLB_VER K3D_TEMPLATE K3S_VER_132 K3S_VER_133
-export K3S_VER K3S_VER_132 K3S_VER_133 K3S_VER_134 K3S_VER_135
+export CALICO_VER MLB_VER K3D_TEMPLATE
+export K3S_VER K3S_VER_132 K3S_VER_133 K3S_VER_134 K3S_VER_135 K3S_VER_136
 CALICO_VER="3.31.4"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
 #CALICO_VER="3.30.6"                        # https://github.com/projectcalico/calico/tags # Don't forget to download new manifest and put in $K3D_DIR when upgrading
                                            # https://raw.githubusercontent.com/projectcalico/calico/v3.30.5/manifests/calico.yaml
 K3S_VER_132="v1.32.12-k3s1"                # https://hub.docker.com/r/rancher/k3s/tags?name=v1.32
-K3S_VER_133="v1.33.8-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
-K3S_VER_134="v1.34.4-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
-K3S_VER_135="v1.35.6-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35 1.35.1 is good, testing 1.35.3 now, 1.35.2 was sloow to come up, testing 1.35.5
-# Everything after 1.35.1 fails to come up in Rancher Desktop. Have not tested Docker Desktop
-# 1.35.6 comes up, but slowly. Waitfor metallb fails
+K3S_VER_133="v1.33.13-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.33
+K3S_VER_134="v1.34.9-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.34
+K3S_VER_135="v1.35.6-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.35 1.35.1 is good, testing 1.35.3 now, 1.35.2 was sloow to come up, testing 1.35.5, works again after 1.35.6
+K3S_VER_136="v1.36.2-k3s1"                 # https://hub.docker.com/r/rancher/k3s/tags?name=v1.36
 MLB_VER="v0.15.3"                          # https://github.com/metallb/metallb/tags
                                            # https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml 
                                            # metallb-native.address-pool.template.yaml
@@ -457,24 +456,22 @@ function _wait_for_pods {
 
   echo "INFO[S005] KCM: waiting for app=$_app to be ready"
   
-  # wait for namespace to be ready
-  local _ns_wait_cd=5
-  local _ns_ready=false
-  local _phase=blue
-  while ! $_ns_ready; do
-    _phase=$(kubectl get namespaces                                            \
-             --context "$_context"                                             \
-             -o json                                                           |
-      jq -r '.items[] | select(.metadata.name == "'"$_namespace"'") | .status.phase'
+  # wait for pods to be scheduled
+	local _no_pods=0
+  local _ps_wait_cd=5
+  local _ps_ready=false
+  while ! $_ps_ready; do
+    _no_pods=$(kubectl get pods                                                \
+             --namespace "$_namespace"                                         \
+             --context "$_context" 2> /dev/null                                |
+      wc -l
     )
-###    echo $_ns_wait_cd "$_phase"
-    if [[ $_phase == Active ]]; then
-      _ns_ready=true
-    elif [[ $_ns_wait_cd -lt 1 ]]; then
-      _ns_ready=true
+#    echo $_ps_wait_cd "$_no_pods" "$_namespace"
+    if [[ $_no_pods -gt 1 ]]; then
+      _ps_ready=true
     else
       sleep 2
-      _ns_wait_cd=$((_ns_wait_cd-1))
+      _ps_wait_cd=$((_ps_wait_cd-1))
     fi
   done
   
